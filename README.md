@@ -12,4 +12,4 @@ The Specialization is divided in 6 courses, and each of them has its own folder 
 6. [Specialized Models: Time Series and Survival Analysis](https://www.coursera.org/learn/time-series-survival-analysis?specialization=ibm-machine-learning)
 
 Mikel Sagardia, 2022.
-No guarantees
+No guarantees.
