@@ -96,6 +96,195 @@ Machine Learning Vocabulary:
 
 ## 2. Retrieving and Cleaning Data (Week 2)
 
-### 2.1 Retrieving Data
+### 2.1 Retrieving Data: CSV, JSON, SQL, NoSQL, APIs
+
+#### CSV
+
+```python
+import pandas as pd
+
+data = pd.read_csv("data/file.csv")
+
+# Other separators: TAB
+data = pd.read_csv("data/file.csv", sep="\t")
+data = pd.read_csv("data/file.csv", delim_whitespace=True)
+
+# First row not names
+data = pd.read_csv("data/file.csv", header=None)
+
+# Set column names
+data = pd.read_csv("data/file.csv", sep="\t")
+
+# Specify colunmn names
+data = pd.read_csv("data/file.csv", names=['Name1', 'Name2'])
+
+# Custom missing names: replace 99 with NA
+data = pd.read_csv("data/file.csv", na_values=['NA', 99])
+```
+
+#### JSON
+
+```python
+import pandas as pd
+filepath = ""
+data = pd.read_json("data/file.json")
+data = pd.to_json("data/ouput.json")
+```
+
+#### SQL
+
+There are many libraries which interact with SQL or relational databases: PostgreSQL, MySQL, SQLite, etc. Each one with its specific properties.
+
+```python
+import sqlite3 as sq3
+#import pandas.io.sql as pds
+import pandas as pd
+
+# Path to database
+path = 'data/classic_rock.db'
+con = sq3.Connection(path)
+
+# Write the query
+query = '''
+SELECT * 
+FROM rock_songs;
+'''
+
+# Execute the query
+#observations = pds.read_sql(query, con)
+data = pd.read_sql(query, con)
+```
+
+#### NoSQL
+
+NoSQL databases are non-relational databases: the data is not structured in tables. There are several types: document-based, key-value-pair-based, etc.
+
+MongoDB is an example of document-based NoSQL database. Each entry is a document, which is interfaces as a JSON object.
+
+```python
+from pymongo import MongoClient
+con = MongoClient()
+
+# Get list of available databases
+con.list_database_names()
+# Choose database with name database_name
+db = con.database_name
+
+# Create a cursor object using a query
+# Similarly to how we have multiple tables
+# in Mongo we have multiple collection_names -> we need to select one
+# query: MongoDB query string, or `{}` to select all
+cursor = db.collection_name.find(query)
+
+# Expand cursor and construct DataFrame
+# list(cursor) is a list of python dictionaries
+# which are converted into a Dataframe
+df = pd.DataFrame(list(cursor))
+```
+
+#### APIs & Cloud
+
+```python
+data_url = 'https://.../database.data'
+df = pw.read_csv(data_url)
+```
+
+### 2.2 Lab Notebooks: Retrieving Data
+
+#### `./lab/01a_DEMO_Reading_Data.ipynb`
+
+An example of how to interact with SQL databases.
+
+```python
+# Imports
+import sqlite3 as sq3
+import pandas.io.sql as pds
+import pandas as pd
+
+# Download the database
+!wget -P data https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-ML0232EN-SkillsNetwork/asset/classic_rock.db
+
+# Initialize path to SQLite databasejdbc:sqlite:/C:/__tmp/test/sqlite/jdbcTest.db
+# Define path to database + create connection
+path = 'data/classic_rock.db'
+con = sq3.Connection(path)
+
+# Write the query
+query = '''
+SELECT * 
+FROM rock_songs;
+'''
+
+# Execute the query
+observations = pds.read_sql(query, con)
+observations.head()
+
+# More complex query
+# executed with a generator using some options
+query='''
+SELECT Artist, Release_Year, COUNT(*) AS num_songs, AVG(PlayCount) AS avg_plays  
+    FROM rock_songs
+    GROUP BY Artist, Release_Year
+    ORDER BY num_songs desc;
+'''
+
+# Execute the query with a generator
+# and interesting options
+observations_generator = pds.read_sql(query,
+                            con,
+                            coerce_float=True, # Doesn't efefct this dataset, because floats were correctly parsed
+                            parse_dates=['Release_Year'], # Parse `Release_Year` as a date
+                            chunksize=5 # Allows for streaming results as a series of shorter tables
+                           )
+
+for index, observations in enumerate(observations_generator):
+    if index < 5:
+        print(f'Observations index: {index}')
+        display(observations)
+
+```
+
+#### `./lab/01b_LAB_Reading_Data.ipynb`
+
+Similar to `./lab/01a_DEMO_Reading_Data.ipynb`.
+
+### 2.3 Data Cleaning
+
+Garbage in, garbage out. So we need to have high quality data.
+
+Most important issues of data:
+- Diplicates
+- Inconsistent text/typos in labels
+- Missing data
+- Outliers that yield skewed models
+- Sourcing issues: multiple technologies that need to be synched
+
+#### Missing Data
+
+Policies or actions we can take:
+- Remove the row with a missing field/column value; however, the complete row is deleted, i.e., also its fields which are not missing. We might remove valuable information!
+- Impute the missing field/column: replace with mean, meadian, most common, etc. However, we are creating new artificial values.
+- Mask the data: create a category for missing values. Maybe there is valueble information in the fact that it's missing. However, we categorize all missing values as the same, and the underlying causes of them being missing might be different!
+
+#### Outliers
+
+Typically, they're aberrations or very distante values.
+However, some outliers are really informative and explain what's happening in the real world!
+
+Detect with
+- Hostogram plots: `sns.histplot()`
+- Box plots: `sns.boxplot()`
+- Residual plots: differences between the real/actual target values and the model predictions
+
+The Inter-Quantile Rage (IQR) is used to detect outliers statistically/numerically.
+
+```python
+import numpy as np
+q25, q50, q75 = np.percentile(data['Unemployment'], [25, 50, 75])
+iqr = q75 - q25
+minV = q25 - 1.5*iqr
+maxV = q75 + 1.5*iqr
+[x for x in data['Unemployment'] if x > maxV]
+```
 
 
