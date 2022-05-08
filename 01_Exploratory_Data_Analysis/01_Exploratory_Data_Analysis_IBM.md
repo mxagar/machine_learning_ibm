@@ -275,8 +275,9 @@ Detect with
 - Hostogram plots: `sns.histplot()`
 - Box plots: `sns.boxplot()`
 - Residual plots: differences between the real/actual target values and the model predictions
+- IQR calculation
 
-The Inter-Quantile Rage (IQR) is used to detect outliers statistically/numerically.
+The **Inter-Quantile Rage** (IQR) is used to detect outliers statistically/numerically.
 
 ```python
 import numpy as np
@@ -287,4 +288,19 @@ maxV = q75 + 1.5*iqr
 [x for x in data['Unemployment'] if x > maxV]
 ```
 
+The **computation of residuals** can be done in several ways:
+- Simple difference between reality and model values
+- Standardized: difference divided by standard error
+- etc.
 
+**Policies** or actions we can take with outliers:
+
+- Remove them; but we might lose relevant information. Additionally, we lose the entire row.
+- Assign/impute the mean, median, etc. But we might be losing relevant information
+- Transform the variable: maybe after a `log` transformation we have no outliers!
+- Predict what the value should be
+	- Using similar observations
+	- using regression
+- Keep them; but the model might turn very skewed
+
+Always consider the fact that outliers might be telling us part of the story of what's happening, and they might be very important.
