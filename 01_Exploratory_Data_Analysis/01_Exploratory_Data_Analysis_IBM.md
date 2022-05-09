@@ -189,7 +189,7 @@ data_url = 'https://.../database.data'
 df = pw.read_csv(data_url)
 ```
 
-### 2.2 Lab Notebooks: Retrieving Data
+### 2.2 Lab Notebooks: Retrieving Data - `./lab/01a_DEMO_Reading_Data.ipynb`
 
 #### `./lab/01a_DEMO_Reading_Data.ipynb`
 
@@ -304,3 +304,205 @@ The **computation of residuals** can be done in several ways:
 - Keep them; but the model might turn very skewed
 
 Always consider the fact that outliers might be telling us part of the story of what's happening, and they might be very important.
+
+### 2.4 Lab Notebooks: Data Cleaning - `Data_Cleaning_Lab.ipynb`
+
+The notebook `Data_Cleaning_Lab.ipynb` is a nice summary of the most important steps to perform when data cleaning is done in a research environment. However, if we want to prepare everything for a development/production envvironment, the code needs to be modified...
+
+In the following, a summary of the contents:
+- Import relevant libraries
+- Get data: `info()`, `describe()`
+- Categorical: `value_counts()`
+- Numerical: correlations with target
+- Target: skewness & transformations: `np.log()`, `np.sqrt()`, `stats.boxcox()`
+- Duplicate rows: detect & drop
+- Missing values
+	- Detect and plot (`bar`)
+	- Drop or impute with mean/median
+- Feature scaling: `MinMaxScaler()`, `StandardScaler()`
+- Outliers
+	- Detect visually: `boxplot()`, `scatter()`
+	- Compute `stats.zscore()` to check how many std. devs. from mean
+	- Consider applying transformations: `np.log()`, `np.sqrt()`, `stats.boxcox()`
+	- Numerically: `sort_values(by, ascending=False)`
+	- Drop if we see that they do not represent reality
+
+In the following, a summary of the code:
+
+```python
+
+### -- Import relevant libraries
+
+import pandas as pd
+import numpy as np 
+
+import seaborn as sns 
+import matplotlib.pylab as plt
+%matplotlib inline
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
+from scipy.stats import norm
+from scipy import stats
+
+### -- Get data: `info()`, `describe()`
+
+housing.to_csv('data/housing.csv',sep=',',header=True,index=False)
+housing = pd.read_csv('data/housing.csv')
+
+housing.head(10)
+housing.info()
+housing["SalePrice"].describe()
+
+### -- Categorical: `value_counts()`
+
+# Get counts of the levels of a categorcial variable
+housing["Sale Condition"].value_counts()
+
+### -- Numerical: correlations with target
+
+# Get correlations between target & numerical dependent variables
+# Select high correlations and order them descending
+hous_num = housing.select_dtypes(include = ['float64', 'int64'])
+hous_num_corr = hous_num.corr()['SalePrice'][:-1] # -1 means that the latest row is SalePrice
+top_features = hous_num_corr[abs(hous_num_corr) > 0.5].sort_values(ascending=False) #displays pearsons correlation coefficient greater than 0.5
+print("There is {} strongly correlated values with SalePrice:\n{}".format(len(top_features), top_features))
+
+# Pair-scatterplots between target and numerical variables
+# for visual inspection
+for i in range(0, len(hous_num.columns), 5):
+    sns.pairplot(data=hous_num, x_vars=hous_num.columns[i:i+5], y_vars=['SalePrice'])
+
+### -- Target: skewness & transformations: `np.log()`, `np.sqrt()`, `stats.boxcox()`
+
+# Distribution of target: it should be bell-shaped, as standardized as possible
+sp_untransformed = sns.distplot(housing['SalePrice'])
+# Compute skewness: if it deviates much from 0, we have tails
+print("Skewness: %f" % housing['SalePrice'].skew())
+
+# Try: apply log transformation and check distirbution and skewness again
+log_transformed = np.log(housing['SalePrice'])
+print("Skewness: %f" % (log_transformed).skew())
+
+# Try: apply sqrt transformation and check distirbution and skewness again
+sqrt_transformed = np.sqrt(housing['SalePrice'])
+print("Skewness: %f" % sqrt_transformed.skew())
+sns.distplot(sqrt_transformed)
+
+# Try: apply boxcox transformation and check distirbution and skewness again
+boxcox_transformed = pd.Series(stats.boxcox(housing['SalePrice'])[0])
+print("Skewness: %f" % boxcox_transformed.skew())
+sns.distplot(boxcox_transformed)
+
+### -- Duplicate rows: detect & drop
+
+# Get duplicated rows
+# housing.duplicated(['PID']) -> False, False, ...
+duplicate = housing[housing.duplicated(['PID'])]
+
+# Drop duplicates
+dup_removed = housing.drop_duplicates()
+
+# Check that all indices are unique
+housing.index.is_unique
+
+### -- Missing values
+
+# Detect missing values, sort them ascending, plot
+total = housing.isnull().sum().sort_values(ascending=False)
+total_select = total.head(20)
+total_select.plot(kind="bar", figsize = (8,6), fontsize = 10)
+plt.xlabel("Columns", fontsize = 20)
+plt.ylabel("Count", fontsize = 20)
+plt.title("Total Missing Values", fontsize = 20)
+
+# Detect missing values, sort them ascending, plot
+# I would drop all features/columns with more than 15% of missing values
+# and impute with the median/mean the rest; maybe impute with median the ones with =<%5
+# predict the ones with 5-15%
+total = housing.isnull().sum().sort_values(ascending=False)
+total_select = total/housing.shape[0] # Normalize to get percentages
+total_select = total_select.head(20) # Select the 20 most relevant feeatures
+total_select.plot(kind="bar", figsize = (8,6), fontsize = 10)
+plt.xlabel("Columns", fontsize = 20)
+plt.ylabel("Count", fontsize = 20)
+plt.title("Total Missing Values", fontsize = 20)
+
+# All rows with NA in column "Lot Frontage" dropped, but not inplace!
+housing.dropna(subset=["Lot Frontage"])
+
+# Entire column "Lot Frontage" dropped, but not inplace!
+housing.drop("Lot Frontage", axis=1)
+
+# Compute median of a column/feature
+median = housing["Lot Frontage"].median()
+# Replace/impute NA values with median
+housing["Lot Frontage"].fillna(median, inplace = True)
+
+# Replace/impute NA values with mean
+mean = housing["Mas Vnr Area"].mean()
+housing["Mas Vnr Area"].fillna(mean, inplace = True)
+
+### -- Feature scaling: `MinMaxScaler()`, `StandardScaler()`
+
+# Fit scaler and transform data: normalize
+# MinMaxScaler: divide each column/feature with (max-min)
+# However, I think it is better to instantiate an object and fit() & transform()
+# separately; then, we need to save the scaler as pickle or another serialized object!
+norm_data = MinMaxScaler().fit_transform(hous_num)
+
+# StandardScaler: (value - mea) / std
+scaled_data = StandardScaler().fit_transform(hous_num)
+
+# The Scikit-Learn scalers seem to work with ND arrays
+# so columns need to be passed as arrays of arrays?
+scaled_sprice = StandardScaler().fit_transform(housing['SalePrice'][:,np.newaxis]) 
+
+### -- Outliers
+
+# Box plot: detect outliers that are outside the 1.5*IQR
+# Keeping or removing them depends on our understanding of the data
+sns.boxplot(x=housing['Lot Area'])
+
+# Also consider transformations! Maybe outlibers disappear after a log transformation
+sns.boxplot(x=np.log(housing['Lot Area']))
+
+# Also perform bi-variate scatter-plots: feature vs target
+# see if some data-points are indeed outside of what is expected
+# Does it make more sense to perform that with features with the highest correlations?
+price_area = housing.plot.scatter(x='Gr Liv Area', y='SalePrice')
+
+# In the scatterplot, the datapoints with the 2 largest values for 'Gr Liv Area' seem to be outliers
+# We get their rows
+housing.sort_values(by = 'Gr Liv Area', ascending = False)[:2]
+
+# Manually removing using the index
+outliers_dropped = housing.drop(housing.index[[1499,2181]])
+
+# Detect outliers in the feature/column 'Lot Area':
+# box-plot (univariate) & scatter-plot (with target)
+# Spot possible outliears visually
+sns.boxplot(x=housing['Lot Area'])
+
+price_lot = housing.plot.scatter(x='Lot Area', y='SalePrice')
+
+# Z-score statistic: how many standard deviations away from the mean
+# Recall the empricial rule: +-1 std 67%, +- 2 std 95%, +- 3 std 99.7%
+# Often the values beyond +- 3std or Z-score are considered outliers
+# BUT: maybe data is not normally distirbuted, instead we have a fat-tails distribution
+# and the high z-scores are points at fat tails that explain the reality!!
+housing['Lot_Area_Stats'] = stats.zscore(housing['Lot Area'])
+
+# Describe provides with quantiles of features
+housing[['Lot Area','Lot_Area_Stats']].describe().round(3)
+
+# Get datapoints sorted by Lot Area
+# After the visual inspection of the plots,
+# the last (larger) ones are candidates to be removed
+# They are also >10 std. deviations away from the center/mean
+housing.sort_values(by = 'Lot Area', ascending = False)[:5]
+
+```
+
+
