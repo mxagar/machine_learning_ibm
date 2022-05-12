@@ -505,4 +505,199 @@ housing.sort_values(by = 'Lot Area', ascending = False)[:5]
 
 ```
 
+## 3. Exploratory Data Analysis and Feature Engineering (Week 3)
 
+### 3.1 Exploratory Data Analysis (EDA)
+
+We want to summarize the data: with number and diagrams, to:
+
+- check whether more data is needed
+- identify patterns
+- etc.
+
+We use:
+
+- Summary statistics: avg., median, min, mx, correlations
+- Viisualizations: histograms, scatter plots, box plots
+
+In this section, the iris dataset is used, which can be loaded as follows
+
+```python
+import seaborn as sns
+iris = sns.load_dataset('iris')
+```
+
+The iris dataset has the following dataframe:
+
+```
+(index) | sepal_length | sepal_width | petal_length | petal_width | species
+species = {'setosa', 'versicolor', 'virginica'}
+```
+
+#### Samples
+
+For larger datasets, we often perform samplings, i.e., we take samples; with that:
+
+- we can have faster computations
+- we can train on random samples
+- we can control the over/underreppresentation of given groups
+
+```python
+# Pandas sample of n=5 rows/data-points
+# replace=False (default): one row appears only once
+sample = data.sample(n=5, replace=False)
+```
+
+#### Visualizations: Matplotib
+
+Libraries used: Matplotlib. Pandas, Seaborn.
+
+Matplotlib:
+
+```python
+import matplotlib.pyplot as plot
+%matplotlib inline
+
+# Scatterplot 1
+plt.plot(data.sepal_length, data.sepal_width, ls='', marker='o', label='sepal')
+
+# Scatterplot 2
+# They are plotted in same diagram, if one after the other
+plt.plot(data.petal_length, data.petal_width, ls='', marker='o', label='petal')
+
+# Histogram
+plt.hist(data.sepal_length, bins=25)
+
+# Subplots
+fig, ax = plt.subplots()
+# Bars, horizontal
+ax.barh(np.arange(10), data.sepal_width.iloc[:10])
+# Set position of ticks and labels
+ax.set_yticks(...)
+ax.set_yticklabels(...)
+ax.set(xlabel='...', ...)
+```
+
+#### Grouping Data: `pandas.groupby()`, `searborn.pairplot()`, `seaborn.jointplot()`, `seaborn.FacetGrid()`
+
+```python
+# GROUP BY
+# When grouping by a column/field,
+# we need to apply the an aggregate function
+data.groupby('species').mean()
+
+# PAIRPLOT
+# All variables plotted against each other: scatterplots, histograms
+# Hue: separate/group by categories
+sns.pairplot(data, hue='species', size=3)
+
+# JOINTPLOT
+# Two variables plotted; type of scatterplot scecified + density histograms
+sns.jointplot(x=data['sepal_length'],y=iris['sepal_width'],kind='hex')
+
+# FACETGRID: map plot types to a grid of plots
+# 1: specify dataset and col groups/levels
+plot = sns.FacetGrid(data, col='species', margin_titles=True)
+# 2: which variable to plot in cols, and which plot type (hist)
+plot.map(plt.hist, 'sepal_width', color='green')
+```
+
+### 3.2 Lab Notebooks: Exploratory Data Analysis (EDA) - `01c_LAB_EDA.ipynb`
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load dataset
+data = pd.read_csv('data/iris_dataset.csv')
+
+# Number of rows
+print(data.shape[0])
+# Column names
+print(data.columns.tolist())
+# Data types
+data.info()
+
+# Number of species
+data.species.value_counts()
+
+# Quantiles
+data.describe()
+
+# Renaming: columns or categories
+data['fam'] = data['species']
+data = data.rename(columns={'fam': 'family'})
+data['family'] = data['family'].replace({'setosa':'iris-setosa',
+										 'virginca':'iris-virginica',
+										 'versicolor':'iris-versicolor'})
+# Undo example
+data.drop('family',axis=1, inplace=True)
+
+# Mean of each variable by species
+data.groupby('species').median()
+# Multiple functions
+data.groupby('species').agg([np.mean, np.median])
+
+# Scatterplot 
+ax = plt.axes()
+ax.scatter(data.sepal_length, data.sepal_width)
+# Label the axes
+ax.set(xlabel='Sepal Length (cm)',
+       ylabel='Sepal Width (cm)',
+       title='Sepal Length vs Width');
+
+# Histogram
+ax = plt.axes()
+ax.hist(data.petal_length, bins=25);
+ax.set(xlabel='Petal Length (cm)', 
+       ylabel='Frequency',
+       title='Distribution of Petal Lengths');
+
+# Histograms overlapped: Pandas visualization
+# A histogram for each numerical variable
+sns.set_context('notebook')
+ax = data.plot.hist(bins=25, alpha=0.5)
+ax.set_xlabel('Size (cm)');
+
+# Boxplot with Pandas:
+# A boxplot for each numerical variable
+# Hue specified with 'by'
+data.boxplot(by='species');
+
+# Pairplot
+sns.set_context('talk')
+sns.pairplot(data, hue='species');
+
+```
+
+### 3.3 Lab Notebooks: Exploratory Data Analysis (EDA) - `EDA_Lab.ipynb`
+
+The notebook has two main parts: in teh first basic EDA is performed, using basically similar functions as in the previous notebook; in the second, the library `plotly.express` is used for nice interactive plots, showcasing
+
+- Interactive line plots
+- Animated bar plots
+- Chloropeth: maps
+
+In the following, a summary of interesting commands of the first part is provided:
+
+```python
+# Split the content of GEO to be two columns
+# .str accesses the string
+# n=1 performs 1 split
+# expand=True returns a dataframe
+data[['City', 'Province']] = data['GEO'].str.split(',', n=1, expand=True)
+
+# Date handling
+data['DATE'] = pd.to_datetime(data['DATE'], format='%b-%y')
+data['Month'] = data['DATE'].dt.month_name().str.slice(stop=3)
+data['Year'] = data['DATE'].dt.year
+
+# Multiple filtering
+mult_loc = data[(data['GEO'] == "Toronto, Ontario") | (data['GEO'] == "Edmonton, Alberta")]
+cities = ['Calgary', 'Toronto', 'Edmonton']
+CTE = data[data.City.isin(cities)]
+
+# Group ba with multiple columns/fetaures
+data.groupby(['Year', 'City'])['VALUE'].median()
+```
