@@ -20,7 +20,20 @@ No guarantees
 
 1. A Brief History of Modern AI and its Applications (Week 1)
 2. Retrieving and Cleaning Data (Week 2)
+	- 2.1 Retrieving Data: CSV, JSON, SQL, NoSQL, APIs
+	- 2.2 Lab Notebooks: Retrieving Data - `./lab/01a_DEMO_Reading_Data.ipynb`
+	- 2.3 Data Cleaning
+		- Missing Data
+		- Outliers
+	- 2.4 Lab Notebooks: Data Cleaning - `Data_Cleaning_Lab.ipynb`
 3. Exploratory Data Analysis and Feature Engineering (Week 3)
+	- 3.1 Exploratory Data Analysis (EDA)
+		- Samples
+		- Visualizations: Matplotib
+		- Grouping Data: `pandas.groupby()`, `searborn.pairplot()`, `seaborn.jointplot()`, `seaborn.FacetGrid()`
+	- 3.2 Lab Notebooks: Exploratory Data Analysis (EDA) - `01c_LAB_EDA.ipynb`
+	- 3.3 Lab Notebooks: Exploratory Data Analysis (EDA) - `EDA_Lab.ipynb`
+	- 3.4 Feature Engineering
 4. Inferential Statistics and Hypothesis Testing (Week 4)
 5. (Optional) HONORS Project (Week 5)
 
@@ -701,3 +714,282 @@ CTE = data[data.City.isin(cities)]
 # Group ba with multiple columns/fetaures
 data.groupby(['Year', 'City'])['VALUE'].median()
 ```
+
+### 3.4 Feature Engineering
+
+Typical feature engineering steps, before data modeling:
+
+- Transformations
+- Create new features, more descriptive
+- Variable/feature selection
+- Feature encoding
+- Feature scaling
+
+The following subsections introduce the most important concepts. The next section contains code examples of them.
+
+Some general notes:
+
+- Always make a copy of the dataset before staring to mess up with it.
+- Use the `pd.info()` function to know the shape, the missing values and the types!
+
+#### Variable/Feature Transformation
+
+Linear regression models assume that there is a linear relationship between the features and the target/outcome variable; therefore, we need to transform the feautures if that relationship is not given.
+
+Linear regression models also assume that the residuals (difference between the target and the predictions) are normally distributed. If that is note the case, we can again use feature transformations, that lead to those normal residuals.
+
+A common approach is to check the skew of the numerical variables; if it's larger than `0.75`, a transformation is applied:
+
+```python
+mask = df.dtypes == np.float
+float_cols = df.columns[mask]
+skew_limit = 0.75 
+skew_vals = df[float_cols].skew()
+skew_cols = list(skew_vals[abs(skew_vals) > 0.75].sort_values().index)
+for col in skew_cols.index.values:
+    if col == "SalePrice": # Target
+        continue
+    df[col] = df[col].apply(np.log1p)
+```
+
+Typical transformations:
+
+- `y = b_0 + b_1 * x`: linear model, no transformation
+- `y = b_0 + b_1 * log(x)`: logarithmic transformation
+- `y = b_0 + b_1*x + b_2 * x^2`: polynomial transformation
+
+Note that the model remains to be linear, but with transformed features.
+
+```python
+# log = ln(x)
+# log1p = ln(1+x), to avoid 0
+from numpy import log, 
+# Boxcox: it finds the ideal way to transform a skewed distribution
+# to a normal one
+from scipy.stats import boxcox
+
+sns.distplot(data) # skewed
+log_data = np.log(data) # log
+sns.distplot(log_data) # check if now non-skewed
+```
+
+The polynomial transoformation can have different degrees, so that the modelled curve becomes more sophisticated. We are creating new features.
+
+```python
+from sklearn.preprocessing import PolynomialFeatures
+
+polyFeat = PolynomialFeatures(degree=2) # square
+polyFeat = polyFeat.fit(X)
+X_poly = polyFeat.transform(X)
+```
+
+#### Create new Features
+
+New, more descriiptive features can be created as follows:
+
+- Multiply different features if we suspect there might be an interaction
+- Divide different features, if the division has a meaning
+- Create deviation factors from the mean of a numeric variable in groups or categories of another categorical variable. See next section with the lab notebook.
+
+#### Variable Selection
+
+We need to select relevant variables for our model.
+
+But how? It's not explained in the course. Solution: I took the following code piece from my forked repository
+
+[deploying-machine-learning-models](https://github.com/mxagar/deploying-machine-learning-models)
+
+```python
+from sklearn.linear_model import Lasso
+from sklearn.feature_selection import SelectFromModel
+
+# Train feature selection model with Lasso regression
+# Lasso: L1 regularized linear regression
+sel_ = SelectFromModel(Lasso(alpha=0.001, random_state=0))
+sel_.fit(X_train, y_train)
+# List of selected columns
+selected_feats = X_train.columns[(sel_.get_support())]
+```
+
+Additionally, consider:
+
+- Use pairplots to check multi-colineearity; correlated features are not good.
+- Check NA values, and drop them if necessary.
+
+#### Feature Encoding
+
+Encoding is often applied to categorical features that can non-numeric values:
+
+- Nominal, unordered: red, green, blue, True/False
+- Ordinal, ordered: high, medium, low
+
+General note: applying `value_counts` is essential; if we find caegories that have very few counts compared to the rest, maybe we should group them in a category called `Other`? See lab notebook in the next section.
+
+Common encoding approached:
+
+- Binary: 0, 1
+- One-hot encoding: each level or category of a categorical variable becomes a binary feature
+- Ordinal encoding: convert ordinal categories to `0,1,2,...`; but be careful: we're assuming the distance from one level to the next is the same -- Is it really so? Maybe it's better applying one-hot encoding?
+
+```python
+# Binary or one-hot encoding
+from sklearn.preprocessing import LabelEncoder, LabelBinarizer, OneHotEncoder
+from pandas import get_dummies
+
+# Ordinal encoding
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.preprocessing import OrdinalEncoder
+```
+
+#### Feature Scaling
+
+In algorithms that use some kind of distance measure between the multi-dimensional data points, it is stringly suggested scaling the features to similar ranges; otherwise, the data point vectors can be really overproportionate in certain directions.
+
+Common scaling approaches:
+
+- Standard scaling: subtract the mean and divide by the standard deviation; features are converted to standard normal viariables.
+- Mix-max scaling: a mapping with which the minimum value becomes 0, max becomes 1. This is senstive to outliers!
+- Robust scaling: IQR range is mapped to `[0,1]`, i.e., percentiles `25%, 75%`; thus, the scaled values go out from the `[0,1]` range.
+
+```python
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+```
+
+### 3.5 Lab Notebooks: Feature Engineering - `01d_DEMO_Feature_Engineering.ipynb`
+
+Peronsal note: This notebook is quite messy; only example transformations are shown and no feature engineering is carried out from beginning to end on a dataset. Additionally, new concepts are introduced, which were not mentioned in the lectures. **However, the processing done here is very interesting. See the code summary below.**
+
+The notebook uses the [Ames Housing Dataset](https://www.kaggle.com/c/house-prices-advanced-regression-techniques).
+
+Important note: always make a copy of the original loaded dataset!
+
+Overview of Contents:
+
+- Simple EDA: load dataset, `info()`, `describe()`, remove id columns
+- One-hot encoding of dummy variables: detect object-type variables and use `pd.get_dummies()`
+- Log-transformation of skewed variables
+- Check NA values; `fillna()`
+- Selection of a subset of variables
+- Pairplot: check multi-colinearity is not strong
+- Feature engineering
+	- Polynomial features; manual or with `sklearn`
+	- Interaction terms
+	- If a categorical variable has many levels, remove levels with few `value_counts()`
+	- Create deviation features: apply `groupby` to a categorical variable and compute deviation factors of another variable withing each group
+
+In the following, the summary of the code pieces is provided.
+
+```python
+
+### -- Simple EDA: load dataset, `info()`, `describe()`, remove id columns
+
+# Cols, missing data, types
+df.info()
+# Always make a copy!
+data = df.copy()
+# Drop columns that have identifier values
+df.drop(['PID','Order'], axis=1, inplace=True)
+
+### --  One-hot encoding of dummy variables: detect object-type variables and use `pd.get_dummies()`
+
+# Filtering by string categoricals
+one_hot_encode_cols = df.dtypes[df.dtypes == np.object]  
+one_hot_encode_cols = one_hot_encode_cols.index.tolist()
+# Do the one hot encoding; but I understand a concat is required to keep them
+df = pd.get_dummies(df, columns=one_hot_encode_cols, drop_first=True)
+
+### --  Log-transformation of skewed variables
+
+# Create a list of float colums (numerical) to check for skewing
+mask = df.dtypes == np.float
+float_cols = df.columns[mask]
+# Threshols skewness: 0.75 is typical
+skew_limit = 0.75 
+skew_vals = df[float_cols].skew()
+# Get list of skewed numerical variables
+skew_vals[abs(skew_vals) > 0.75].sort_values()
+skew_cols = list(skew_vals[abs(skew_vals) > 0.75].sort_values().index)
+# Apply log1p
+for col in skew_cols.index.values:
+    if col == "SalePrice": # Target
+        continue
+    df[col] = df[col].apply(np.log1p)
+
+### --  Check NA values; apply `fillna()`
+
+df.isnull().sum().sort_values()
+# ...
+
+### --  Selection of a subset of variables
+
+# We would select some features...
+X = df.loc[:,['Lot Area', 'Overall Qual', 'Overall Cond', 
+                      'Year Built', 'Year Remod/Add', 'Gr Liv Area', 
+                      'Full Bath', 'Bedroom AbvGr', 'Fireplaces', 
+                      'Garage Cars']]
+y = df['SalePrice']
+
+### --  Pairplot: check multi-colinearity is not strong
+
+sns.pairplot(X, plot_kws=dict(alpha=.1, edgecolor='none'))
+
+### --  Polynomial features; manual or with `sklearn`
+
+# Manual
+X2 = X.copy()
+X2['OQ2'] = X2['Overall Qual'] ** 2
+X2['GLA2'] = X2['Gr Liv Area'] ** 2
+
+# With Scikit-Learn
+X2 = X.copy()
+from sklearn.preprocessing import PolynomialFeatures
+pf = PolynomialFeatures(degree=2)
+features = ['Lot Area', 'Overall Qual']
+pf.fit(df[features])
+feat_array = pf.transform(X2[features])
+# Get a dataframe with the new polynomial features
+# But it needs to be concatenated to X2
+poly_df = pd.DataFrame(feat_array, columns = pf.get_feature_names(input_features=features))
+X2 = pd.concat([X2,poly_df])
+
+### --  Interaction terms
+
+X3 = X2.copy()
+
+# Multiplicative interaction
+X3['OQ_x_YB'] = X3['Overall Qual'] * X3['Year Built']
+# Division interaction
+X3['OQ_/_LA'] = X3['Overall Qual'] / X3['Lot Area']
+
+### --  If a categorical variable has many levels, remove levels with few `value_counts()`
+
+X4 = X3.copy()
+nbh_counts = X4.Neighborhood.value_counts()
+other_nbhs = list(nbh_counts[nbh_counts <= 8].index)
+X4['Neighborhood'] = X4['Neighborhood'].replace(other_nbhs, 'Other')
+
+### --  Create deviation features: apply `groupby` to a categorical variable and compute deviation factors of another variable withing each group
+
+def add_deviation_feature(X, feature, category):
+    
+    # temp groupby object
+    category_gb = X.groupby(category)[feature]
+    
+    # create category means and standard deviations for each observation
+    category_mean = category_gb.transform(lambda x: x.mean())
+    category_std = category_gb.transform(lambda x: x.std())
+    
+    # compute stds from category mean for each feature value,
+    # add to X as new feature
+    deviation_feature = (X[feature] - category_mean) / category_std 
+    X[feature + '_Dev_' + category] = deviation_feature 
+
+X5 = X4.copy()
+X5['House Style'] = df['House Style']
+add_deviation_feature(X5, 'Year Built', 'House Style')
+add_deviation_feature(X5, 'Overall Qual', 'Neighborhood')
+```
+
+
+
+
