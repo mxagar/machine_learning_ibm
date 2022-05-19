@@ -720,8 +720,8 @@ data.groupby(['Year', 'City'])['VALUE'].median()
 Typical feature engineering steps, before data modeling:
 
 - Transformations
-- Create new features, more descriptive
-- Variable/feature selection
+- Extract / create new features, more descriptive
+- Variable / feature selection
 - Feature encoding
 - Feature scaling
 
@@ -968,7 +968,7 @@ nbh_counts = X4.Neighborhood.value_counts()
 other_nbhs = list(nbh_counts[nbh_counts <= 8].index)
 X4['Neighborhood'] = X4['Neighborhood'].replace(other_nbhs, 'Other')
 
-### --  Create deviation features: apply `groupby` to a categorical variable and compute deviation factors of another variable withing each group
+### --  Create deviation features: apply `groupby` to a categorical variable and compute deviation factors of another variable within each group
 
 def add_deviation_feature(X, feature, category):
     
@@ -989,6 +989,10 @@ X5['House Style'] = df['House Style']
 add_deviation_feature(X5, 'Year Built', 'House Style')
 add_deviation_feature(X5, 'Overall Qual', 'Neighborhood')
 ```
+
+### 3.6 Lab Notebooks: Feature Engineering - `Feature_Engineering_Lab.ipynb`
+
+Interesting notebook in which the following steps are carried out:
 
 
 
