@@ -34,6 +34,32 @@ No guarantees
 	- 3.2 Lab Notebooks: Exploratory Data Analysis (EDA) - `01c_LAB_EDA.ipynb`
 	- 3.3 Lab Notebooks: Exploratory Data Analysis (EDA) - `EDA_Lab.ipynb`
 	- 3.4 Feature Engineering
+		- Variable/Feature Transformation
+		- Create new Features
+		- Variable Selection
+		- Feature Encoding
+		- Feature Scaling
+	- 3.5 Lab Notebooks: Feature Engineering - `01d_DEMO_Feature_Engineering.ipynb`
+		- Simple EDA: load dataset, `info()`, `describe()`, remove id columns
+		- One-hot encoding of dummy variables: detect object-type variables and use `pd.get_dummies()`
+		- Log-transformation of skewed variables
+		- Check NA values; `fillna()`
+		- Selection of a subset of variables
+		- Pairplot: check multi-colinearity is not strong
+		- Feature engineering
+			- Polynomial features; manual or with `sklearn`
+			- Interaction terms
+			- If a categorical variable has many levels, remove levels with few `value_counts()`
+			- Create deviation features: apply `groupby` to a categorical variable and compute deviation factors of another variable withing each group
+	- 3.6 Lab Notebooks: Feature Engineering - `Feature_Engineering_Lab.ipynb`
+		- - (Check missing values)
+		- Rename doubled categories in categorical variables
+		- One-hot encoding of categoricals
+		- Replace categorical levels by numerical values
+		- **Date and time transformations**: convert string to date, extract month & day & hour, encode time zone, extract day name. Many date and time transformations are done in several ways.
+		- Selection of relevant features by hand
+		- Correlations: matrix & correlation wrt. target
+		- PCA: sparsity of information is estimated detecting the number of variables that account for 95% of the explained variance.
 4. Inferential Statistics and Hypothesis Testing (Week 4)
 5. (Optional) HONORS Project (Week 5)
 
@@ -992,8 +1018,208 @@ add_deviation_feature(X5, 'Overall Qual', 'Neighborhood')
 
 ### 3.6 Lab Notebooks: Feature Engineering - `Feature_Engineering_Lab.ipynb`
 
-Interesting notebook in which the following steps are carried out:
+Interesting notebook in which the following steps related to feature engineering are carried out:
 
+- (Check missing values)
+- Rename doubled categories in categorical variables
+- One-hot encoding of categoricals
+- Replace categorical levels by numerical values
+- **Date and time transformations**: convert string to date, extract month & day & hour, encode time zone, extract day name. Many date and time transformations are done in several ways.
+- Selection of relevant features by hand
+- Correlations: matrix & correlation wrt. target
+- PCA: sparsity of information is estimated detecting the number of variables that account for 95% of the explained variance.
 
+```python
+import pandas as pd
+import numpy as np
 
+import matplotlib.pyplot as plt
+import seaborn as sns
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+data = pd.read_csv('data/airlines_data.csv')
+data.head()
+
+### -- Check missing values
+
+data.isnull().sum()
+data = data.fillna(method='ffill') # Hold last sample value
+
+### -- Rename doubled categories in categorical variables
+
+data['Airline'].unique().tolist() # check doubles
+data['Airline'] = np.where(data['Airline']=='Jet Airways Business',
+	'Jet Airways', data['Airline'])
+
+### -- One-hot encoding of categoricals
+
+# Note that if columns passed, dummy vavirables of them are created
+# while keeping and returning the rest of the dataframe; i.e., no need for concat
+data1 = pd.get_dummies(data=data, columns = ['Airline', 'Source', 'Destination'])
+
+### -- Replace categorical levels by numerical values
+
+data.replace({"non-stop":0,
+	"1 stop":1,"2 stops":2,"3 stops":3,"4 stops":4},inplace=True)
+
+### -- Date and time transformations
+
+# Typical Duration value: '7h 25m'
+# Convert to hours & minutes integers
+duration = list(data['Duration'])
+for i in range(len(duration)) :
+    if len(duration[i].split()) != 2:
+        if 'h' in duration[i] :
+            duration[i] = duration[i].strip() + ' 0m'
+        elif 'm' in duration[i] :
+            duration[i] = '0h {}'.format(duration[i].strip())
+
+dur_hours = []
+dur_minutes = []  
+ for i in range(len(duration)) :
+    dur_hours.append(int(duration[i].split()[0][:-1]))
+    dur_minutes.append(int(duration[i].split()[1][:-1]))
+     
+data['Duration_hours'] = dur_hours
+data['Duration_minutes'] = dur_minutes
+data.loc[:,'Duration_hours'] *= 60
+data['Duration_Total_mins'] = data['Duration_hours']+data['Duration_minutes']
+
+# Typical Dep_Time value: 05:50
+# Extract hours and minutes
+data["Dep_Hour"] = pd.to_datetime(data['Dep_Time']).dt.hour
+data["Dep_Min"] = pd.to_datetime(data['Dep_Time']).dt.minute
+
+# Create time zone / day time variable
+data['dep_timezone'] = pd.cut(data.Dep_Hour,
+	[0,6,12,18,24],
+	labels=['Night','Morning','Afternoon','Evening'])
+data['dep_timezone']
+
+# Typical Date_of_Journey: 24/03/2019
+# Extract day, month, year, day of week
+data['Month']= pd.to_datetime(data["Date_of_Journey"], format="%d/%m/%Y").dt.month
+data['Day']= pd.to_datetime(data["Date_of_Journey"], format="%d/%m/%Y").dt.day
+data['Year']= pd.to_datetime(data["Date_of_Journey"], format="%d/%m/%Y").dt.year
+data['day_of_week'] = pd.to_datetime(data['Date_of_Journey']).dt.day_name()
+
+### -- Selection of relevant features by hand
+
+data.columns # display all columns and select relevant ones
+new_data = data.loc[:,['Total_Stops', 'Airline_Air Asia',
+       'Airline_Air India', 'Airline_GoAir', ..., 'Dep_Hour',
+       'Dep_Min', 'dep_timezone', 'Price']]
+
+### -- Correlations: matrix & correlation wrt. target
+
+plt.figure(figsize=(18,18))
+sns.heatmap(new_data.corr(),annot=True,cmap='RdYlGn')
+
+features = new_data.corr()['Price'].sort_values()
+features.plot(kind='bar',figsize=(10,8))
+
+### -- PCA
+
+# Scale data
+scaler = StandardScaler()
+X = scaler.fit_transform(new_data.astype(np.float64))
+
+# PCA with all components
+pca = PCA(n_components = X.shape[1])
+pca.fit_transform(x)
+
+# Explained variance of each principal component
+explained_variance = pca.explained_variance_ratio_
+explained_variance
+
+# Sum all explained variances until 95% is reached;
+# how many components do we need?
+cumsum = np.cumsum(pca.explained_variance_ratio_)
+d = np.argmax(cumsum >=0.95) + 1
+
+# Another way to answer the question above:
+# pass varinace ratio float as n_components
+pca = PCA(n_components=0.95)
+X_reduced = pca.fit_transform(X)
+X_reduced.shape[1]
+
+```
+
+## 4. Inferential Statistics and Hypothesis Testing (Week 4)
+
+### 4.1 Estimation, Inference, and Hypothesis Testing: Differences
+
+- Estimation: for instance, we compute mean of a population. It is an estimate of the real mean, because we have used a sample.
+- Inference: we put an accuracy on the estimation of our parameter, for instance the standard error. This implies either confidence intervals or statistical significances.
+- Machine learning is very close to statistical estimation; however, we can also have estimations and accuracies.
+
+#### Exploratory Data Analysis
+
+In any case, the very first case consists in performing a good exploratory data analysis and visualizing the data. An example is given for the case of customer churn of a fictional telecom company. These information is plotted:
+
+- Barplot of churn rate (`churn_value`) depending on payment type.
+- Barplot of churn rate depending on customer duration in months (`pd.cut()` is used to put numerical values into buckets).
+- Paiplot of numerical variables using as `hue = churn_value`.
+- Jointplot with hexplot between monthly charge and customer duration in months
+
+#### Parametric vs. Non-Parametric Statistics
+
+In contrast to parametric statistics, in non-parametric statistics 
+
+- in general, we make fewer assumptions
+- and, in particular, the data don't need to belong to a distribution
+
+Parametric models, in contrast to non-parametric ones, have analytic formular which depend on a limited number of parameters.
+
+Example of parametric model: Normal distirbution; parameters: mean and standard deviation / variance.
+
+The Maximum Likelihood Estimation is used to estimate the parameters of a model.
+
+#### Commonly Used Distributions
+
+- Uniform: the chances of rolling a number from a die
+- Normal: popular because of the **Central Limit Theorem**: the sampling distirbution of the means is normal if we have enough samples and data. It's a distribution with very low likelihoods for extreme values; as such, it appears in natural and physical phenomena such as height and weight.
+- **Log-normal: if we take the log of a log-normal, we have the normal distribution. It looks like a skewed normal distribution with longer tails. Very common!**
+	- Examples: household income, etc.
+- **Exponential**: most of the values closer to the left side.
+	- Typical example: amount of time before the next event; the time between two people watching this video?
+- **Poisson**: number of events that happen during a certain amount of time. Parameter: `lambda`, both average and variance.
+	- Example: How many people are going to watch this video in the next ten minutes?
+
+#### Frequentist vs. Bayesian Statistics
+
+- Frequentists: repeated observations in the limit
+	- Probabilities are modelled from the data; we perform many experiments.
+- Bayesians: parameters are described as distributions
+	- We have prior distirbutions or beliefs (educated guesses), which are updated with the data
+	- After the update, we have the posterior distribution of the parameter
+
+In both frameworks, the maths is the same; the interpretation and the process are different.
+
+### 4.2 Hypothesis Testing
+
+The videos of this section are not good; not very practical.
+
+We have: 
+
+- `H0`: null hypothesis; default specific value (e.g., mean) we see if we can reject to take the alternative. Considering `H0` is true, which is the probability that the data is in accordance to it? If the probability is low (e.g., lower than 5%), we reject the `H0` in favor of the `Ha`
+- `Ha`: alternative hypothesis; taken as valid when the `H0` is rejected.
+
+The `H0` defines the decision boundary in the frewuentist framework; in the Bayesian framework, we don't have boundaries, instead, we get updated posterior probabilities of `H0` and `Ha` and decide wwhich one is more likely.
+
+#### Errors: Type I & Type II
+
+- Accept `H0`, but it's wrong: Type I
+- Accept `Ha` (i.e., reject `H0`), but it's wrong: Type II
+
+![Type I and II Errors](type_1_2_errors.png)
+
+- P(Type I error) = `alpha`, significance level, typically 0.05
+- P(Type II error) = `beta`
+- Power of a test = 1 - `beta`
+
+The examples given are not good. I think the main idea here is that `alpha` and `beta` depende on the distirbutions of `H0` and `Ha`.
+
+Examples video...
