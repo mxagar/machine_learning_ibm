@@ -1149,6 +1149,10 @@ X_reduced.shape[1]
 
 ## 4. Inferential Statistics and Hypothesis Testing (Week 4)
 
+This section is quite bad. No real practical explanations given, in my opinion.
+
+My notes are not introductory; I understand them because I have already worked on these things.
+
 ### 4.1 Estimation, Inference, and Hypothesis Testing: Differences
 
 - Estimation: for instance, we compute mean of a population. It is an estimate of the real mean, because we have used a sample.
@@ -1220,6 +1224,39 @@ The `H0` defines the decision boundary in the frewuentist framework; in the Baye
 - P(Type II error) = `beta`
 - Power of a test = 1 - `beta`
 
-The examples given are not good. I think the main idea here is that `alpha` and `beta` depende on the distirbutions of `H0` and `Ha`.
+The examples given are not good. I think the main idea here is that `alpha` and `beta` depend on the distirbutions of `H0` and `Ha`.
 
-Examples video...
+#### Significance Levels and P-Values
+
+The **significance level** is the value below which we reject our null hypothesis: `alpha`; it's value depends on the importance of the Type I and II errors.
+
+Example: we have a new medication which can heal some desease, but also can cause some side effects; the `alpha` for testing its healing effeicacy should be very low (e.g. `0.001`)! For other not that delicate cases, values between `0.01 - 0.05` are common.
+
+Not choosing the `alpha` before computing the test statistic is p-hacking.
+
+The **p-value** is the probability under null distirbution of seeing a result more extreme than what was observed. So we assume `H0` is true.
+
+The **confience interval**: the values of the test statistic for which we accept the null.
+
+Practical interpretation of `alpha = 0.05`: `1 - 0.05 = 0.95 = 95%` of observations are inside the region threshold, which is 2 standard deviations in the case of the normal distribution.
+
+#### F-Statistic
+
+The F value in regression is the result of a test where the null hypothesis is that all of the regression coefficients are equal to zero, i.e., there is no model that predicts better than the mean of all values.
+
+We check the p-value of the F value/statistic: if it's below `alpha = 0.05`, we reject the null and consider the model valid.
+
+Even thou the F statistic is computed in a different manner in ANOVA, the F distribution used seems to be the same: the F distribution is the ratio of two chi-square distributions with degrees of freedom df1 and df2.
+
+#### Power and Sample Size
+
+If we do many %5 significance tests (i.e., many group comparisons or multiple samplings) looking for a significant result, the chances of making at least one Type I error increase.
+
+The probability of at least one Type I error is approx: `1 - (1-0.05)^num_tests`. This is roughly `0.05 x num_tests` if `num_tests < 10`.
+
+Thus, the Bonferroni correction: we adjust `alpha`: `0.05 / num_tests`.
+
+The Bonferroni correction decreases the Type I error, but increases the Type II error, i.e., we decrease the power of our test.
+
+### 4.3 Lab Notebooks: Hypothesis Testing - `01e_DEMO_Hypothesis_Testing.ipynb`
+
