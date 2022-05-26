@@ -13,7 +13,7 @@ The Specialization is divided in 6 courses, and each of them has its own folder 
 
 This file focuses on the **first course: Exploratory Data Analysis for Machine Learning**
 
-Mikel Sagardia, 2022.
+Mikel Sagardia, 2022.  
 No guarantees
 
 ## Overview of Contents
@@ -61,7 +61,7 @@ No guarantees
 		- Correlations: matrix & correlation wrt. target
 		- PCA: sparsity of information is estimated detecting the number of variables that account for 95% of the explained variance.
 4. Inferential Statistics and Hypothesis Testing (Week 4)
-5. (Optional) HONORS Project (Week 5)
+5. (Optional) HONORS Project (Week 5): Note done.
 
 ## 1. A Brief History of Modern AI and its Applications (Week 1)
 
@@ -1153,7 +1153,9 @@ This section is quite bad. No real practical explanations given, in my opinion.
 
 My notes are not introductory; I understand them because I have already worked on these things.
 
-For inference and hypothesis testing, refer to my notes on the topic from the Coursera course:
+Go directly to Section 4.5: Lab Notebooks: Hypothesis Testing - `HypothesisTesting_Lab.ipynb`.
+
+For more and better info on inference and hypothesis testing, refer to my notes on the topic from the Coursera course:
 
 [Statistics with Python](https://github.com/mxagar/statistics_with_python_coursera) / `02_Inference` / `lab`
 
@@ -1325,7 +1327,112 @@ Examples:
 
 Correlations that occur by chance.
 
-### Personal Notes
+### 4.5 Lab Notebooks: Hypothesis Testing - `HypothesisTesting_Lab.ipynb`
+
+This is the most interesting notebook in the section related to hypothesis testing, since practical tests are deon here.
+
+The dataset is related to the customer risk assessment of an insurance company, covering 1338 datapoints with these features:
+
+`age, sex, bmi, children, smoker, region, charges (= money paid to them)`
+
+The following concepts are mentioned:
+
+- One-sided vs. two-sided tests
+- T-tests: compare a mean of a population toa reference or two means.
+- Z-score: like T-test but for large samples (n >= 30); also used for proportions.
+- F-score: compare variances between 2+ populations; statistc for ANOVA.
+- Chi-square test: used to determine whether there is a statistically significant difference between the expected and the observed frequencies in one or more categories of a contingency table; a contingency table contains frequencies between multiple categorical variables, e.g.: `[gender, smoke] = (male, female) x (yes, no)`.
+
+Altogether, 4 examples are shown:
+
+- Example 1: T-Test of independent samples: BMI difference between males and females.
+- Example 2: T-Test of independent samples: Charges of smokers are larger for smokers.
+- Example 3: One-way ANOVA: BMI of women with no children, one child, and two children compared.
+- Example 4: Chi-square test: Is the proportion of smokers is significantly different across the different regions?
+
+```python
+
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+import scipy.stats as stats 
+from scipy.stats import chi2_contingency
+
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm 
+
+### -- Example 1: T-Test of independent samples: BMI difference between males and females.
+
+female = data.loc[data.sex=="female"]
+male = data.loc[data.sex=="male"]
+
+# Plot
+f_bmi = female.bmi
+m_bmi = male.bmi
+sns.histplot(f_bmi,color='green')
+sns.histplot(m_bmi,color='red') # quite similar
+
+# Test: T-test, two-sided
+# H0: mean_male = mean_female
+# Ha: mean_male != mean_female
+alpha=0.05
+t_value1, p_value1 = stats.ttest_ind(m_bmi, f_bmi)
+print("t_value1 = ",t_value1, ", p_value1 = ", p_value1) # p_value1 =  0.08997637178984932 (cannot reject H0)
+
+### --- Example 2: T-Test of independent samples: Charges of smokers are larger for smokers.
+
+smoker = data.loc[data.smoker=="yes"]
+smoker_char = smoker.charges
+nonsmoker = data.loc[data.smoker=="no"]
+nonsmoker_char = nonsmoker.charges
+
+# Plot
+sns.boxplot(x=data.charges,y=data.smoker,data=data).set(title="Fig:1 Smoker vs Charges")
+
+# Test: T-test, one-sided
+# H0: mean_smoker <= mean_nonsmoker
+# Ha: mean_smoker > mean_nonsmoker
+alpha=0.05
+t_val2, p_value2 = stats.ttest_ind(smoker_char, nonsmoker_char)
+p_value_onetail=p_value2/2
+print("t_value = {} , p_value ={} , p_value_onetail = {}".format(t_val2, p_value2, p_value_onetail)) # p_value -> 0 (reject H0)
+
+### -- Example 3: One-way ANOVA: BMI of women with no children, one child, and two children compared.
+
+female_children = female.loc[female['children']<=2]
+female_children.groupby([female_children.children]).mean().bmi
+
+sns.boxplot(x="children", y="bmi", data=female_children)
+
+# Test: ANOVA
+# Build OLS model with formula and compute ANOVA table
+formula = 'bmi ~ C(children)'
+model = ols(formula, female_children).fit()
+aov_table = anova_lm(model)
+aov_table # P(>F) = 0.715858 (cannot reject H0 -> there is no difference between means)
+
+### -- Example 4: Chi-square test: Is the proportion of smokers is significantly different across the different regions?
+
+# Create contingency table
+contingency= pd.crosstab(data.region, data.smoker)
+contingency
+
+# Plot as bar chart
+contingency.plot(kind='bar')
+
+# Test: Chi-sqare
+# H0: Smokers proportions are not significantly different across the different regions. 
+# Ha: Smokers proportions are different across the different regions.
+# p_val = 0.06171954839170541 (cannot reject H0)
+chi2, p_val, dof, exp_freq = chi2_contingency(contingency, correction = False)
+print('chi-square statistic: {} , p_value: {} , degree of freedom: {} ,expected frequencies: {} '.format(chi2, p_val, dof, exp_freq))
+
+```
+
+### 4.6 Personal Notes
 
 This section is bad.
 
