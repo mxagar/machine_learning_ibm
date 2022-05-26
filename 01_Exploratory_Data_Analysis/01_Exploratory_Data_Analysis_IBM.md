@@ -1153,6 +1153,15 @@ This section is quite bad. No real practical explanations given, in my opinion.
 
 My notes are not introductory; I understand them because I have already worked on these things.
 
+For inference and hypothesis testing, refer to my notes on the topic from the Coursera course:
+
+[Statistics with Python](https://github.com/mxagar/statistics_with_python_coursera) / `02_Inference` / `lab`
+
+My local folder:
+
+`~/git_repositories/statistics_with_python_coursera`
+
+
 ### 4.1 Estimation, Inference, and Hypothesis Testing: Differences
 
 - Estimation: for instance, we compute mean of a population. It is an estimate of the real mean, because we have used a sample.
@@ -1259,4 +1268,72 @@ Thus, the Bonferroni correction: we adjust `alpha`: `0.05 / num_tests`.
 The Bonferroni correction decreases the Type I error, but increases the Type II error, i.e., we decrease the power of our test.
 
 ### 4.3 Lab Notebooks: Hypothesis Testing - `01e_DEMO_Hypothesis_Testing.ipynb`
+
+The notebook is quite theoretical: the example of predicting 100 fair coin tosses is analyzed.
+
+We toss a fair coin 100 times and claim we can predict its value above 56 of the times:
+
+- `H0`: we cannot predict, our rate is 0.5
+- `Ha`: we can predict, our rate is larger than 0.5
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats 
+import math
+
+# Binomial distirbution: n Bernoulli trials
+# Bernuoulli distribution: distirbution for two categories with p and 1-p
+from scipy.stats import binom
+
+# 1) Test: Which is the probability of observing >56 considering H0 true?
+# CDF: Cummulative density function: integral/area of the density function
+# We need to do 1-CDF(tosses)
+# because we're checking the prob of guessing those tosses or more
+prob = 1 - binom.cdf(56, 100, 0.5)
+print(str(round(prob*100, 1))+"%") # 9.7% < alpha = 5 %
+
+# 2) Which is the critical prediction rate to reject H0?
+# PPF: Percent point function:
+# we insert the % of the CDF and get the variable to get that % 
+print(binom.ppf(0.95,100,0.5)+1) # 59
+```
+
+In the notebook, it is further shown that increasing the sample size (1000 tosses instead of 100) increases the chance of getting significant results! That is basically because we reduce the variance, i.e., the standard error.
+
+### 4.4 Correlation vs. Causation
+
+Does it rain more on cooler days? We tend to associate cool with rain, but in some regions, warmth increases humidity, which leads to rain.
+
+If two variables X and Y are correlated, X is useful for predict Y; the correlation might be due to different reasons:
+
+- X causes Y
+- Y causes X
+- X and Y are both caused by something else (confounding)
+- Y and Y aren't really related, we have a lucky sample which causes a spurious correlation
+
+#### Confounding Variables
+
+X and Y are correlated, but none of them causes the other, instead, both are caused by something else.
+
+Examples:
+
+- Car accidents and people called John are correlated; reason: both correlated with population size: the larger the population, the larger the number of car accidents and people called John.
+- Amount of ice-cream and drownings are correlated; reason: both increased by temperature: more people eat ice-cream and go swimming.
+
+#### Spurios Correlations
+
+Correlations that occur by chance.
+
+### Personal Notes
+
+This section is bad.
+
+For inference and hypothesis testing, refer to my notes on the topic from the Coursera course:
+
+[Statistics with Python](https://github.com/mxagar/statistics_with_python_coursera) / `02_Inference` / `lab`
+
+My local folder:
+
+`~/git_repositories/statistics_with_python_coursera`
 
