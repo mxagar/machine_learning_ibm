@@ -61,6 +61,23 @@ No guarantees
 		- Correlations: matrix & correlation wrt. target
 		- PCA: sparsity of information is estimated detecting the number of variables that account for 95% of the explained variance.
 4. Inferential Statistics and Hypothesis Testing (Week 4)
+	- 4.1 Estimation, Inference, and Hypothesis Testing: Differences
+		- Exploratory Data Analysis
+		- Parametric vs. Non-Parametric Statistics
+		- Commonly Used Distributions
+		- Frequentist vs. Bayesian Statistics
+	- 4.2 Hypothesis Testing
+		- Errors: Type I & Type II
+		- Significance Levels and P-Values
+		- F-Statistic
+		- Power and Sample Size
+	- 4.3 Lab Notebooks: Hypothesis Testing - `01e_DEMO_Hypothesis_Testing.ipynb`
+	- 4.4 Correlation vs. Causation
+		- Confounding Variables
+		- Spurios Correlations
+	- 4.5 Lab Notebooks: Hypothesis Testing - `HypothesisTesting_Lab.ipynb`
+	- 4.6 Personal Notes
+
 5. (Optional) HONORS Project (Week 5): Note done.
 
 ## 1. A Brief History of Modern AI and its Applications (Week 1)
