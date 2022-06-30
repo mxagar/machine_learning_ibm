@@ -6,3 +6,4 @@ python_manual.txt
 sklearn_scipy_sympy_stat_guide.txt
 statistics_with_python_coursera
 eda_fe_summary
+__pycache__
