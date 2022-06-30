@@ -19,7 +19,15 @@ No guarantees
 ## Overview of Contents
 
 1. [Introduction to Supervised Machine Learning](#1.-Introduction-to-Supervised-Machine-Learning)
+	- 1.1 Interpretation vs. Prediction
 2. [Linear Regression](#2.-Linear-Regression)
+	- 2.1 Model Definition
+	- 2.2 Model Evaluation: R2
+	- 2.3 Python Code with Scikit-Learn
+	- 2.4 Python Lab: `02a_LAB_Transforming_Target.ipynb`
+3. [Training and Test Splits](#3.-Training-and-Test-Splits)
+4. [Cross-Validation](#4.-Cross-Validation)
+5. [Polynomial Regression](#5.-Polynomial-Regression)
 
 ## 1. Introduction to Supervised Machine Learning
 
@@ -254,3 +262,15 @@ lr_pred = lr.predict(X_test_s)
 r2_score(lr_pred,y_test) # 0.8555202098064152
 
 ```
+
+## 3. Training and Test Splits
+
+
+
+## 4. Cross-Validation
+
+
+
+## 5. Polynomial Regression
+
+
