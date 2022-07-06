@@ -523,13 +523,20 @@ ax.set(xlabel='Ground truth',
        title='Ames, Iowa House Price Predictions vs Truth, using Linear Regression')
 ```
 
-## 4. Cross-Validation
+## 4. Cross-Validation for Hyperparameter Tuning
 
-Cross-validation consists in carrying out the train-test split on the dataset several times so that each test split does not overlap with the others. The idea is to improve the model performance evaluation by averaging the performance results; that way, we performance metric is closer to the truth. Note: we call the test split the **validation** split here. Of course, the process takes longer, because if we have `k=4` splits, we need to train and evaluate `k` models.
+Cross-validation consists in carrying out the train-test split on the dataset several times so that each test split does not overlap with the others. The idea is to improve the model performance evaluation by averaging the performance results; that way, we performance metric is closer to the truth. Note: **we call the test split the validation split** here. Of course, the process takes longer, because if we have `k=4` splits, we need to train and evaluate `k` models.
 
 ![Cross Validation](./pics/cross_validation.png)
 
-There are several approaches for cross-validation, which mainly depend on how the `k` splits are done. However, note that all of them explained here are different from the ones explained by Andrew Ng and Udacity. Andrew Ng and Udacity reserve a third split in the whole dataset for validation only. This validation split is tested, for instance, every epoch. At the end, the model is exposed to the test split with data-points it never saw.
+There are several approaches for cross-validation, which mainly depend on how the `k` splits are done. However, note that all of them explained here are different from the ones explained by Andrew Ng and Udacity. Andrew Ng and Udacity reserve a third split in the whole dataset for validation only. This validation split is tested, for instance, every epoch. At the end, the model is exposed to the test split with data-points it never saw. I think that checking the validation split every epoch makes sense when training the model is very time consuming.
+
+I understand one could do the following to have the best of both worlds:
+
+- Split the dataset in train & test splits.
+- Take the train split and perform cross-validation with it; that implies it will be split into train-test/validation splits again `k` times.
+- After the cross-validation is done, fit the model with the initial train split.
+- Finally, test the fitted model with the initial test split, which was never shown to the model.
 
 ### 4.1 Underfitting vs. Overfitting
 
@@ -618,8 +625,257 @@ That automatic way can be further automatized with `Pipelines` so that we can pe
 
 ### 4.4 Python Lab: `02c_DEMO_Cross_Validation.ipynb`
 
+This is a very interesting notebook in which the cross-validation approaches are applied to perform their ultimate goal: hyperparameter tuning.
 
+In summary, the following processing is done:
+
+1. Load Simplified Housing Dataset
+2. Manual Cross-Validation
+3. Cross-Validation with Pipeline and `cross_val_predict`
+4. Hyperparameter Tuning: Finding Optimum Regularization Alpha
+5. Grid Search Cross-Validation: Find the Optimal Value of Several Parameters
+
+Summary of the most important code pieces:
+
+```python
+
+import numpy as np
+import pickle
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.model_selection import KFold, cross_val_predict
+from sklearn.linear_model import LinearRegression, Lasso, Ridge
+from sklearn.metrics import r2_score
+from sklearn.pipeline import Pipeline
+
+### -- 1. Load Simplified Housing Dataset
+
+# Note we are loading a slightly different ("cleaned") pickle file
+# It is a dictionary in binary form.
+boston = pickle.load(open('data/boston_housing_clean.pickle', "rb" ))
+boston_data = boston['dataframe']
+boston_description = boston['description']
+boston_data.shape # (506, 14)
+boston_data.columns # ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT', 'MEDV']
+X = boston_data.drop('MEDV', axis=1)
+y = boston_data.MEDV
+
+### -- 2. Manual Cross-Validation
+
+# The train-test/valiation splits are all mutually exclusive,
+# i.e., the test/validation splits do not overlap,
+# but the train indices can overlap
+kf = KFold(shuffle=True, random_state=72018, n_splits=3)
+
+# Initialize model and empty array of scores (one for each split)
+scores = []
+lr = LinearRegression()
+
+# Get indices of each split, fit model, evaluate and get metric/score
+for train_index, test_index in kf.split(X):
+    X_train, X_test, y_train, y_test = (X.iloc[train_index, :], 
+                                        X.iloc[test_index, :], 
+                                        y[train_index], 
+                                        y[test_index])
+    lr.fit(X_train, y_train)
+    y_pred = lr.predict(X_test)
+    score = r2_score(y_test.values, y_pred)
+    scores.append(score)
+
+### -- 3. Cross-Validation with Pipeline and cross_val_predict
+
+s = StandardScaler()
+lr = LinearRegression()
+
+# The tuple objects have: (name, object)
+# The object array must be a ssequence of objects with these properties
+# - all need to have a fit() method
+# - all but the last need to have a transform() method
+# - the final one must have a predict() method
+estimator = Pipeline([("scaler", s),
+                      ("regression", lr)])
+
+# We can now use the estimator as a model
+estimator.fit(X_train, y_train)
+estimator.predict(X_test) # ...
+
+# The data is split according to the cv parameter.
+# Each sample belongs to exactly one test set, 
+# and its prediction is computed with an estimator fitted on the corresponding training set.
+# Thus the predictions are a compilation of results on different non-overlapping test splits.
+predictions = cross_val_predict(estimator, X, y, cv=kf)
+
+# This is not a real R2, because the results are a compilation 
+# of different models
+r2_score(y, predictions) # 0.839054936432341
+
+np.mean(scores) # 0.8507649765436147: almost identical!
+
+### -- 4. Hyperparameter Tuning: Finding Optimum Regularization Alpha
+
+# Regularization alpha: the larger, the less complex the model, less overfitting
+# Logarithmic jumps in a range
+alphas = np.geomspace(1e-9, 1e0, num=10)
+
+pf = PolynomialFeatures(degree=3)
+
+# Lasso and Ridge regression: alpha coefficient = factor of the regularization term
+# Low alpha: more complex model, more similar to linear regression
+# High alpha: less complex model
+# We want to find the optimum alpha
+# Perform cross-validation with varying alphas
+scores = []
+coefs = []
+for alpha in alphas:
+    las = Lasso(alpha=alpha, max_iter=100000)
+    # We could also do:
+    # ridge = Ridge(alpha=alpha, max_iter=100000)
+    
+    # For regular regression scaling does not affect so much
+    # but for any regularized regression it does.
+    # Always scale before fitting the model!
+    estimator = Pipeline([
+        ("polynomial_features", pf),
+        ("scaler", s),
+        ("lasso_regression", las)])
+
+    predictions = cross_val_predict(estimator, X, y, cv = kf)
+    score = r2_score(y, predictions)
+    scores.append(score)
+
+list(zip(alphas,scores))
+# Small alpha values make coefficients do not remove the coefficients
+Lasso(alpha=1e-6).fit(X, y).coef_
+# Large alpha values make coefficients -> 0, i.e., we simplify our model
+Lasso(alpha=1.0).fit(X, y).coef_
+# Plot alpha vs. score: select optimum
+# Note: we use semilogx
+plt.figure(figsize=(10,6))
+plt.semilogx(alphas, scores, '-o')
+plt.xlabel('$\\alpha$')
+plt.ylabel('$R^2$');
+
+# Optimum alpha maximizes score
+alphas[np.argmax(scores)] # 0.008858667904100823 ~ 0.01
+
+# Once we have found the hyperparameter
+# make the model and train it on ALL the data.
+# Now, we should get a new test dataset that NEVER was exposed to the model.
+# However, here we don't have one and we compute the score with the complete dataset we have instead.
+# A way of doing that would be to make a train-test split at the beginning
+# and then perform the k-fold cross validation on the train split.
+best_estimator = Pipeline([
+                    ("scaler", s),
+                    ("polynomial_features", PolynomialFeatures(degree=2)),
+                    ("lasso_regression", Lasso(alpha=0.01))])
+
+best_estimator.fit(X, y)
+best_estimator.score(X, y) # the default score is R2 for regression models
+# 0.9241797703677183
+
+# We can access the elements of the Pipeline with .named_steps["object_name"] 
+# Note that many coefficients are zeroed out;
+# that is usual with the Lasso regression.
+best_estimator.named_steps["lasso_regression"].coef_ # ...
+
+# Feature importances
+df_importances = pd.DataFrame(zip(best_estimator.named_steps["polynomial_features"].get_feature_names_out(input_features=X.columns),
+                 best_estimator.named_steps["lasso_regression"].coef_,
+))
+# Display and plot feature importances = ordered coefficients
+df_importances.sort_values(by=1)
+fig = plt.figure(figsize=(5,20))
+plt.barh(df_importances.sort_values(by=1).iloc[:,0],df_importances.sort_values(by=1).iloc[:,1])
+
+### -- 5. Grid Search Cross-Validation: Find the Optimal Value of Several Parameters
+
+# In previous point 4, we looped different alpha values
+# In practice, we should loop more all possible hyperparameters
+# such as the degree of the PolynomialFeatures
+# Instead of doing it manually, we can do it with GridSearchCV
+
+from sklearn.model_selection import GridSearchCV
+
+# Same estimator as before
+estimator = Pipeline([
+    ("polynomial_features", PolynomialFeatures()),
+    ("scaler", StandardScaler()),
+    ("ridge_regression", Ridge())])
+
+# Definition of mutually exclusive k=3 valiadation splits
+kf = KFold(shuffle=True, random_state=72018, n_splits=3)
+
+# We copose a dictionary with parameter values to test or to look up
+# If the estimator is a model: {'paramater':[value_array]}
+# If the estimator is a Pipeline: {'object_name__parameter':[value_array]}; note the double '_'!
+params = {
+    'polynomial_features__degree': [1, 2, 3],
+    'ridge_regression__alpha': np.geomspace(1e-3, 20, 30)
+}
+
+# Instantiate a grid search for cross-validation
+grid = GridSearchCV(estimator, params, cv=kf)
+
+# Find the optimal parameters
+# Basically, the estimator is fit going through all parameter combinations:
+# 3 degrees x 30 alphas = 90 combinations
+grid.fit(X, y) # X_train, y_train
+
+# Get best values: cross-validation score and parameters associated wwith it
+grid.best_score_, grid.best_params_
+
+# The best parameter set is taken and the estimator used to predict
+# Notice that "grid" is a fit object!
+# We can use grid.predict(X_test) to get brand new predictions!
+y_predict = grid.predict(X) # X_test
+
+# This includes both in-sample and out-of-sample
+r2_score(y, y_predict) # y_test, y_predict
+
+# We can access any Pipeline object of the best estimator
+# and their attributes & methods!
+# Here, the model coefficients
+grid.best_estimator_.named_steps['ridge_regression'].coef_
+
+# Get the model statistics/properties of each parameter combination
+pd.DataFrame(grid.cv_results_)
+
+```
 
 ## 5. Polynomial Regression
 
+Even though we and higher degree terms, we still have a **linear regression** because we linearly add the features after weighting them with their coefficients.
 
+With higher degree features we can analyze:
+
+- The relation of the outcome with nonlinear features of higher order.
+- Interactions between features.
+
+This polynomial features are not exclusive to regression; we can use them with any type of model!
+
+Other algorithms can help us extend our linear models:
+
+- Logistic Regression
+- K-Nearest Neighbors
+- Decision Trees
+- Support Vector Machines
+- Random Forests
+- Ensemble Methods
+- Deep Learning Approaches
+
+Python code snippet for polynomial features:
+
+```python
+from sklearn.preprocessing import PolynomialFeatures
+
+# We create 2nd degree variables of the existing ones
+# Note: bias will be added by the regression model
+pf = PolynomialFeatures(degree=2, include_bias=False)
+pf.fit(X)
+X_pf = pf.transform(X)
+# Alternative:
+# X_pf = pf.fit_transform(X)
+pf.get_feature_names_out() # get all feature names after the polynomial computation
+```
