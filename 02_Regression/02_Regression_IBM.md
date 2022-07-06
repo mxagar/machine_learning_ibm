@@ -523,8 +523,100 @@ ax.set(xlabel='Ground truth',
        title='Ames, Iowa House Price Predictions vs Truth, using Linear Regression')
 ```
 
-
 ## 4. Cross-Validation
+
+Cross-validation consists in carrying out the train-test split on the dataset several times so that each test split does not overlap with the others. The idea is to improve the model performance evaluation by averaging the performance results; that way, we performance metric is closer to the truth. Note: we call the test split the **validation** split here. Of course, the process takes longer, because if we have `k=4` splits, we need to train and evaluate `k` models.
+
+![Cross Validation](./pics/cross_validation.png)
+
+There are several approaches for cross-validation, which mainly depend on how the `k` splits are done. However, note that all of them explained here are different from the ones explained by Andrew Ng and Udacity. Andrew Ng and Udacity reserve a third split in the whole dataset for validation only. This validation split is tested, for instance, every epoch. At the end, the model is exposed to the test split with data-points it never saw.
+
+### 4.1 Underfitting vs. Overfitting
+
+The cross-validation error is used to check whether we are (1) underfitting, (2) overfitting, or (3) just fine.
+
+Underfitting models are too simplistic and their train or cross-validation errors are large and decreasing.
+
+![Model Complexity: Underfitting](./pics/complexity_underfitting.png)
+
+When we start overfitting, the train error decreases, but the cross-validation error has plateaud and started increasing. These models are too complex and fit the noise; thus, they don't generalize well.
+
+![Model Complexity: Overfitting](./pics/complexity_overfitting.png)
+
+### 4.2 Cross-Validation Approaches
+
+- K-fold cross-validation: using each of `k` subsamples as a test sample; that's the approach explained before: `k` splits are evaluated and the performance is averaged.
+- Leave one out cross-validation: using each observation as a test sample; that is using `k=rows-1`, i.e., we train many models and evaluate each time with a data point. Very time consuming.
+- Stratified cross-validation: k-fold cross-validation with representative samples; we keep the ratios of classes in the validation split to avoid introducing bias.
+
+### 4.3 Python Implementation Snippet
+
+#### Manual
+
+```python
+from sklearn.model_selection import KFold
+from sklearn.metrics import r2_score
+
+# Create a splitter for k=3 train-test splits
+kf = KFold(shuffle=True, random_state=72018, n_splits=3)
+
+# Initialize model and empty array of scores (one for each split)
+scores = []
+lr = LinearRegression()
+
+# Get indices of each split, fit model, evaluate and get metric/score
+for train_index, test_index in kf.split(X):
+    X_train, X_test, y_train, y_test = (X.iloc[train_index, :], 
+                                        X.iloc[test_index, :], 
+                                        y[train_index], 
+                                        y[test_index])
+    lr.fit(X_train, y_train)
+    y_pred = lr.predict(X_test)
+    score = r2_score(y_test.values, y_pred)
+    scores.append(score)
+```
+
+#### Automatic
+
+```python
+from sklearn import linear_model
+from sklearn.model_selection import cross_val_score
+
+# We need to instantiate and pass the model to fit
+model = linear_model.LinearRegression()
+print(cross_val_score(model, X, y, cv=3, scoring='neg_root_mean_squared_error'))
+## cv: number of subsets; if classification, StratifiedKFold, if regression KFold
+# - None: 5-fold split
+# - int: n-fold split
+# - We can also pass a splitter object like KFold()
+## Scoring
+# https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-parameter
+# Regression: neg because we want to maximize the metric, thus negative MSE
+# - neg_root_mean_squared_error
+# - neg_mean_squared_error
+# - r2
+# - ...
+# Classification
+# - accuracy
+# - f1
+# - ...
+
+
+from sklearn.model_selection import KFold, cross_val_predict
+
+# Create a splitter for k=3 train-test splits
+kf = KFold(shuffle=True, random_state=72018, n_splits=3)
+
+# The data is split according to the cv parameter.
+# Each sample belongs to exactly one test set, 
+# and its prediction is computed with an estimator/model fitted on the corresponding training set.
+predictions = cross_val_predict(model, X, y, cv=kf)
+# IMPORTANT: the final model is not fitted yet, we need to do it!
+```
+
+That automatic way can be further automatized with `Pipelines` so that we can perform **hyperparameter tuning** either in a loop or in a **grid search**.
+
+### 4.4 Python Lab: `02c_DEMO_Cross_Validation.ipynb`
 
 
 
