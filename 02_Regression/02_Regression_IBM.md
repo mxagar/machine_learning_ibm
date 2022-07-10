@@ -961,6 +961,64 @@ While scaling features was not that important with non-regularized linear regres
 
 ### 6.4 Lasso Regression (L1)
 
+Lasso regression is linear regression with L1 regularization, i.e., we add the sum of absolute values of the weights to the cost function:
+
+```
+E(w) <- E(w) + lambda * R(w)
+
+R(w) = sum(abs(w_j))
+```
+
+Lasso stands for: Least Absolute Shrinkage and Selection Operator.
+
+It is similar to Ridge, but with Lasso some coefficients are selectively shrunk to 0, while the rest remain. Thus, Lasso can be used for feature selection! Meanwhile, with Ridge the coefficients shrink more homogeneously.
+
+Lasso convergence is also lower and it takes longer. 
+
+### 6.5 Elastic Net: Hybrid Ridge and Lasso Regularization
+
+Elastic net consists in applying both Ridge and Lasso techniques with a weighting factor `alpha`:
+
+```
+E(w) <- E(w) + lambda * R(w)
+
+R(w) = sum(alpha*(w_j)^2 + (1-alpha)*abs(w_j))
+```
+
+Cross-validation decides which `alpha` to use for an optimum bias-variance trade-off.
+
+![Elastic Net](./pics/elastic_net.png)
+
+Note that this can be achieved by adding two regularization terms, each with its `lambda`:
+
+```
+E(w) <- E(w) + lambda_1 * R_Ridge(w) + lambda_2 * R_Lasso(w)
+```
+
+### 6.6 Recursive Feature Elimination
+
+Recursive Feature Elimination (RFE) is another tool that Scikit-Learn provides to perform feature selection.
+
+We choose
+
+- a model
+- and the number of paramaters we'd like
+
+and RFE repeteadly tests the model and recursively removes the less important features.
+
+Basically, the **features need to have a feature importance value** (e.g., regression with coefficients, random forests, etc.); the ones with the smallest value are removed.
+
+```python
+from sklearn.feature_selection import RFE, RFECV
+
+rfe = RFE(estimator=model, n_features_to_select=5)
+rfe.fit(X_train, y_train)
+y_pred = rfe.predict(X_test)
+
+# Recursive feature elimination with cross-validation to select the number of features
+rfecv = RFECV(estimator=model, n_features_to_select=5)
+
+```
 
 
 ## 7. Polynomial Features and Regularizations
