@@ -28,6 +28,9 @@ No guarantees
 3. [Training and Test Splits](#3.-Training-and-Test-Splits)
 4. [Cross-Validation](#4.-Cross-Validation)
 5. [Polynomial Regression](#5.-Polynomial-Regression)
+6. [Regularization Techniques](#6.-Regularization-Techniques)
+7. [Polynomial Features and Regularization](#7.-Polynomial-Features-and-Regularization)
+8. [Further Details on regularization](#8.-Further-Details-on-Regularization)
 
 ## 1. Introduction to Supervised Machine Learning
 
@@ -879,3 +882,89 @@ X_pf = pf.transform(X)
 # X_pf = pf.fit_transform(X)
 pf.get_feature_names_out() # get all feature names after the polynomial computation
 ```
+
+## 6. Regularization Techniques
+
+### 6.1 The Bias-Variance Trade-Off
+
+As complexity increases, usually the error on the training set decreases, but from a point on, the error of teh cross-validation split starts increasing, because we're overfitting, thus, the model doesn't generalize well.
+
+We want to find the sweet spot.
+
+![Complexity vs. error](./pics/complexity_vs_error.png)
+
+We differentiate between **bias** and **variance**. Both are errors that increase usually in opposite directions: when we increase the variance, the bias decreases, and vice versa.
+
+- Bias is related to the tendency to miss; it appears with simplistic models with which we have undrfitting.
+- Variance is related to the inconsistency in the inferences; it appears with too complex models with which we have overfitting, thus, we cannot generalize well.
+
+![Bias and Variance: Intuition](./pics/bias_variance_intuition.png)
+
+Thus, we distinguish 3 sources of errors:
+
+1. Bias: being wrong
+2. Variance: being unstable
+3. Irreducible error: unavoidable randomness
+
+The **bias-variance tradde-off**: as we decrease bias (increase complexity), the variance increases; since the total error is the sum of both and the error due to randomness, there is a sweet spot in which we have the minimum total error. We aim to find that spot: the model is complex enough, but not too complex, so that it generalizes well.
+
+![Bias and Variance Tradeoff](./pics/bias_variance_tradeoff.png)
+
+Example of the boas-variance tradeoff with polynomial features:
+
+![Polynomial features: bias-variance tradeoff](./pics/polynomial_features_bias_variance.png)
+
+### 6.2 Regularization and Model Selection
+
+One way of preventing overfitting (i.e., decresing variance error) is using regularization.
+
+Regularization consists in adding a function of the weights to the cost function of the model. That way, **large weights are penalize and we don't fit the model so close to the data**.
+
+```
+E(w) <- E(w) + lambda * R(w)
+
+E: error
+w: weights, coefficients or model paramaters
+lambda: regularization strength factor; the larger the more regularization
+R: regularization funtion on the model paramaters, which increases with larger weights
+```
+
+The key idea is that we control the complexity of the model with `lambda`: the larger the `lambda` is, the smaller the weights will be, so the model will tend to be less complex, not fitting the dataset so accurately.
+
+Thus, regularization imposes bias to the model, but it reduces variance!
+
+We can select the best `lambda` value via cross-validation.
+
+#### Feature Selection
+
+Not all features are always relevant; sometimes the only thing they achieve is that we fit to the noise.
+
+In that sense, regularization is very helpful: we fit the data while still decreasing the dominant features. In particular, the Lasso reguralization manages to shrink irrelevant features to 0, so we effectively achieve feature selection!
+
+Feature selection is also important due to model interpretability: we want to have only the most relevant features to intepret what is going on.
+
+### 6.3 Ridge Regression (L2)
+
+Ridge regression is linear regression with L2 regularization, i.e., we add the sum of squares of the weights to the cost function:
+
+```
+E(w) <- E(w) + lambda * R(w)
+
+R(w) = sum((w_j)^2)
+```
+
+With ridge regression, model parameters are decreased, but not completely shrunk to be 0, as happens with Lasso. Instead, they become more homogeneous.
+
+While scaling features was not that important with non-regularized linear regression, it is super important to scale with regularized regressions. That is because features with unscaled large values have smaller coefficients, but these might be in fact more dominanr in relation to others. In other words: we need to scale the variables to a common range to obtain a fair set of coefficients so that regularization can be applied in equal conditions for all coefficients.
+
+![Ridge Regression](./pics/ridge_regression_error.png)
+
+### 6.4 Lasso Regression (L1)
+
+
+
+## 7. Polynomial Features and Regularizations
+
+
+## 8. Further Details on regularization
+
