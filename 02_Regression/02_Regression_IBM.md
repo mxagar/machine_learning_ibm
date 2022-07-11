@@ -129,6 +129,8 @@ lr.fit(X_train, y_train)
 y_pred = lr.predict(X_test)
 ```
 
+**Important note**: even though it is not mentioned in the course, the linear regression model has an analytical solution. Thus, no learning rate is passed to the model -- the learning rate makes sense when we have an iterative optimization approach. For the case of the regularized models, no learning rate use used either; in those cases, a solver can be selected (default is `auto`). However, if we use the `SGDRegressor`, we can set a `learning_rate` and a decay policy. See section 7 for more details.
+
 ### 2.4 Python Lab: `02a_LAB_Transforming_Target.ipynb`
 
 This notebook contains the following: 
@@ -953,7 +955,7 @@ E(w) <- E(w) + lambda * R(w)
 R(w) = sum((w_j)^2)
 ```
 
-With ridge regression, model parameters are decreased, but not completely shrunk to be 0, as happens with Lasso. Instead, they become more homogeneous.
+With ridge regression, model parameters are decreased, but not completely shrunk to be 0, as happens with Lasso. Instead, they become more homogeneous. It is helpful in situations with high variance.
 
 While scaling features was not that important with non-regularized linear regression, it is super important to scale with regularized regressions. That is because features with unscaled large values have smaller coefficients, but these might be in fact more dominanr in relation to others. In other words: we need to scale the variables to a common range to obtain a fair set of coefficients so that regularization can be applied in equal conditions for all coefficients.
 
@@ -1020,9 +1022,129 @@ rfecv = RFECV(estimator=model, n_features_to_select=5)
 
 ```
 
+## 7. Polynomial Features and Regularization: Demo
 
-## 7. Polynomial Features and Regularizations
+Notebook: `02d_DEMO_Regularization_and_Gradient_Descent.ipynb`
 
+This notebook has three parts:
 
-## 8. Further Details on regularization
+1. An artificial dataset of a noisy sine wave `y = sin(x)` is modelled with linear regression, Ridge regression and Lasso regression using polynomial features (degree of 20). The results are as expected:
+	- Regularized regressions yield much lower RMSE
+	- The coefficients are plotted for all 3 regressions: regularized regressions have much lower coefficients and they are almost 0 for higher degrees.
+2. The Ames housing dataset is taken, processed and modelled with (1) linear regression, (2) Ridge regression, (3) Lassso regression and (4) ElasticNet using built-in cross-validation. The following steps are carried out:
+	- String variables are one-hot encoded.
+	- The skew of numerical variables is computed; those with `skew > 0.75` are transformed with `np.log1p`.
+	- The dataset is split to `train` and `test`.
+	- Scaling is performed.
+	- The four models are computed with built-in cross-validation and their RMSE is computed; Ridge seems to achieve the best result. Note that ElasticNet is tried in discrete ratios, so the optimum value is not hit, probably.
+3. The same Ames housing dataset is used with the `SGDRegressor` model. This is just a demonstration of how to configure stochastic gradient descent; Ridge, Lasso and ElasticNet penalties are used. Takeaway: always scale the data before using SGD!
+
+In the following, the relevant code snippets related to the **second and third parts** (the first part has nothing new, it's just a demonstration of the theoretical insights):
+
+```python
+from sklearn.metrics import mean_squared_error
+
+# Auxiliary function, since some estimators don't have a score output
+def rmse(ytrue, ypredicted):
+    return np.sqrt(mean_squared_error(ytrue, ypredicted))
+
+### -- 1. Linear Regression
+
+from sklearn.linear_model import LinearRegression
+
+linearRegression = LinearRegression()
+linearRegression.fit(X_train, y_train)
+linearRegression_rmse = rmse(y_test, linearRegression.predict(X_test))
+
+print(linearRegression_rmse) # 306369
+
+### -- 2. Ridge Regression with Cross-Validation
+
+# We could use Ridge(), but with RidgeCV we have cross-validation built-in;
+# this is somehow equivalent to using GridCV, but we don't pass the model.
+from sklearn.linear_model import RidgeCV
+
+# Regularization strength values to test
+alphas = [0.005, 0.05, 0.1, 0.3, 1, 3, 5, 10, 15, 30, 80]
+
+# Ridge with Cross-Validation
+ridgeCV = RidgeCV(alphas=alphas, cv=4)
+ridgeCV.fit(X_train, y_train)
+ridgeCV_rmse = rmse(y_test, ridgeCV.predict(X_test))
+
+print(ridgeCV.alpha_, ridgeCV_rmse) # 15.0 32169.18
+
+### -- 3. Lasso Regression with Cross-Validation
+
+from sklearn.linear_model import LassoCV
+
+alphas2 = np.array([1e-5, 5e-5, 0.0001, 0.0005])
+
+lassoCV = LassoCV(alphas=alphas2,
+                  max_iter=5e4,
+                  cv=3)
+lassoCV.fit(X_train, y_train)
+lassoCV_rmse = rmse(y_test, lassoCV.predict(X_test))
+
+print(lassoCV.alpha_, lassoCV_rmse)  # 0.0005 39257.39
+# Number of coefficients
+len(lassoCV.coef_)
+# Number of non-zero coefficients
+len(lassoCV.coef_.nonzero()[0])
+
+### -- 4. ElasticNet with Cross-Validation
+
+from sklearn.linear_model import ElasticNetCV
+
+l1_ratios = np.linspace(0.1, 0.9, 9) # [0.1, 0.2, ..., 0.9]
+
+elasticNetCV = ElasticNetCV(alphas=alphas2, 
+                            l1_ratio=l1_ratios,
+                            max_iter=1e4)
+elasticNetCV.fit(X_train, y_train)
+elasticNetCV_rmse = rmse(y_test, elasticNetCV.predict(X_test))
+
+print(elasticNetCV.alpha_, elasticNetCV.l1_ratio_, elasticNetCV_rmse) # 0.0005 0.1 35001.23
+
+### -- 5. Stochastic Gradient Descend Regresson
+
+# Import SGDRegressor and prepare the parameters
+from sklearn.linear_model import SGDRegressor
+
+# SGDRegressor applies linear regression with stochastic gradient descend,
+# i.e., we apply gradient descend by updating the weights/parameters iteratively.
+# Thus, a learning rate `eta` is used; 
+# however, this learning rate has a default value and it decays with the iterations (see the docs).
+# Note that linear regression has an analytical solution, hence, no learning rate is required.
+# The regularized regressions have their own solvers and no learning rate is passed either.
+# The SGDRegressor can take several penalty values for regularization, with the regularization strength.
+
+# We create four sets of parameters: LR, Ridge, Lasso, ElasticNet
+model_parameters_dict = {
+    'Linear': {'penalty': 'none'},
+    'Lasso': {'penalty': 'l2',
+           'alpha': lassoCV.alpha_},
+    'Ridge': {'penalty': 'l1',
+           'alpha': ridgeCV.alpha_},
+    'ElasticNet': {'penalty': 'elasticnet', 
+                   'alpha': elasticNetCV.alpha_,
+                   'l1_ratio': elasticNetCV.l1_ratio_}
+}
+
+# ALWAYS scale the data with SGDRegressor!
+scaler = MinMaxScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+rmses = {}
+for modellabel, parameters in model_parameters_dict.items():
+    # Following notation passes the dict items as arguments
+    # If we get very high RMSE values, we can pass a smaller learning rate eta0
+    # than the default; note that by default eta0 is decreased after each iteration
+    SGD = SGDRegressor(**parameters)
+    SGD.fit(X_train, y_train)
+    rmses[modellabel] = rmse(y_test, SGD.predict(X_test))
+```
+
+## 8. Further Details on Regularization
 
