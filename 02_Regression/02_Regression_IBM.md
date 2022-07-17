@@ -1031,7 +1031,7 @@ This notebook has three parts:
 1. An artificial dataset of a noisy sine wave `y = sin(x)` is modelled with linear regression, Ridge regression and Lasso regression using polynomial features (degree of 20). The results are as expected:
 	- Regularized regressions yield much lower RMSE
 	- The coefficients are plotted for all 3 regressions: regularized regressions have much lower coefficients and they are almost 0 for higher degrees.
-2. The Ames housing dataset is taken, processed and modelled with (1) linear regression, (2) Ridge regression, (3) Lassso regression and (4) ElasticNet using built-in cross-validation. The following steps are carried out:
+2. The Ames housing dataset is taken, processed and modelled with (1) linear regression, (2) Ridge regression, (3) Lasso regression and (4) ElasticNet using built-in cross-validation. The following steps are carried out:
 	- String variables are one-hot encoded.
 	- The skew of numerical variables is computed; those with `skew > 0.75` are transformed with `np.log1p`.
 	- The dataset is split to `train` and `test`.
@@ -1147,4 +1147,65 @@ for modellabel, parameters in model_parameters_dict.items():
 ```
 
 ## 8. Further Details on Regularization
+
+The key idea of regularization is to avoid the model fitting the data-points too strictly. Therefore, we increase the bias error expecting to reduce the variance error -- note that both are inversely related, so there is a tradde-off.
+
+To that end, the cross-validation segregation is used: it is the subset of the data that checks whether we are fitting the data too much; if that were the case, we'd get low errors on the training split and higher errors on the cross-validation or test split.
+
+In other words: regularization consists in systematically sending away the parameters from their optimum point so that we have a more relaxed model that generalizes better.
+
+Regularization can be interpreted in several ways:
+
+- Analytically
+- Geometrically
+- Probabilistically
+
+#### Analytic Interpretation
+
+If we plot the coefficient values as the `lambda` regularization strength increases, we see that they decrease. In fact, the possible range of the coefficients decreases, too, so they are not as sensitive; additionally, the variance decreases, too. Thus, we have a simpler model with a lower variance.
+
+![Regularization Interpretation: Analytic View](./pics/regularization_interpretation_analytical.png)
+
+When we eliminate features (e.g., because they become 0 with Lasso), the variance associated to their features is cancelled, too.
+
+#### Geometric Interpretation
+
+Ridge and Lasso regularization is like applying a constrained optimization on a quadratic function (in the case of MSE):
+
+- In the case of Ridge, the constrained region is a circle: `sum((beta_j)^2) < s`.
+- In the case of Lasso, the constrained region is a polygon with corners in the parameter axes:  `sum(abs(beta_j)) < s`.
+
+The loss function is a parabolloid, which will be centered in the optimum point; that optimum point will be usually outside.
+
+Given that geometric description, we see that the constrained optimum must lie on the boundary of the constrained region, where region and the paraboloid intersect and the tangent of both is the same.
+
+![Regularization Interpretation: Geometric View](./pics/regularization_interpretation_geometric.png)
+
+In the case of Lasso, that point must lie on one of the region corners, thus, some coefficients will be cancelled, because corners are in the parameter axes.
+
+#### Probabilistic Interpretation
+
+Regularization imposes prior distributions on the probability of the coefficients. In the case of Ridge, the prior is Gaussian, in the case of Lasso, it is Laplacian (a high peak in the center).
+
+So, the posterior is:
+
+`p(beta|X,Y) = f(Y|X,beta)*p(beta)`.
+
+![Regularization Interpretation: Probabilistic View](./pics/regularization_interpretation_probabilistic.png)
+
+Since we have a high peak in the Laplacian prior, it's more likely to have parameters that become 0!
+
+### 9. Python Lab: Regularization
+
+Notebook: `02e_LAB_Regularization.ipynb`.
+
+This notebook is not that interesting in terms of new techniques or API calls that are applied. Instead, the effect of using Lasso vs. Ridge with different `lambda` regularization strengths and scaling vs. not-scaling is analyzed.
+
+Thus, I put here the insights only, not the code:
+
+- Scaling is more important when we use regularization, because we are penalizing the parameter values; if these are in a known limited range, the value of the `lambda` regularization strength is affecting them in a more similar way.
+- The expected behaviors are replicated: with Lasso, if we increase `lambda`, the number of cancelled coefficient increases, thus the model becomes simpler.
+- We need to check which regularization is the best for our dataset: Lasso vs. Ridge, `labda` value? We test that by checking the loss with the test split.
+
+### 10. Peer-Reviewed Project
 
