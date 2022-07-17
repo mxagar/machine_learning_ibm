@@ -1,6 +1,6 @@
 # IBM Machine Learning Certificate: Regression Project
 
-We need to choose a data set in which we apply regression and write a report (a PDF) describing the data analysis and the insights. Submitting the code is optional.
+We need to choose a dataset in which we apply regression and write a report (a PDF) describing the data analysis and the insights. Submitting the code is optional.
 
 Requirements:
 
@@ -15,3 +15,12 @@ Requirements:
 
 I decided to modify my [airbnb_data_analysis](https://github.com/mxagar/airbnb_data_analysis) to meet the requirements.
 
+This folder contains:
+
+- `Report.md`: the report generated for the IBM submission
+- `pics/`: pictures used in the report.
+
+Note that the `README.md` of the repossitory [airbnb_data_analysis](https://github.com/mxagar/airbnb_data_analysis) and the [blog post](https://mikelsagardia.io/blog/airbnb-spain-basque-data-analysis.html) contain pieces of that report.
+
+Mikel Sagardia, 2022.  
+No guarantees.
