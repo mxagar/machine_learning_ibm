@@ -23,10 +23,10 @@ In order to answer the questions, the following steps have been carried out sequ
 
 The remainder of this report is organized in these sections:
 
-- **The Dataset and Its Processing**: The dataset and a summary of the steps 1-4 is explained.
-- **Modelling**: The used model variations with their performances are introduced (step 5).
-- **Results of Question 1 - Price Regreesion Model**: the key findings after performing the inference and the model interpretation are provided (step 6).
-- **Future work**: Ways of possible improvements are highlighted.
+- [**The Dataset and Its Processing**](#the-dataset-and-its-processing): The dataset and a summary of the steps 1-4 is explained.
+- [**Modelling**](#modelling): The used model variations with their performances are introduced (step 5).
+- [**Results of Question 1 - Price Regression Model**](#results-of-question-1---price-regression-model): the key findings after performing the inference and the model interpretation are provided (step 6).
+- [**Future Work**](#future-work): Ways of possible improvements are highlighted.
 
 ## The Dataset and Its Processing
 
@@ -111,7 +111,7 @@ Following the last point, all the questions were studied using only the linear f
 The following diagram shows the performance of the Ridge regression model and the random forests model with the test split using only the 353 linear features.
 
 <p align="center">
-<img src="/pics/regression_evaluation.png" alt="Performance of regression models" width="400"/>
+<img src="./pics/regression_evaluation.png" alt="Performance of regression models" width="400"/>
 </p>
 
 The models tend to under-predict accommodation prices; that bias clearly increases as the prices start to be larger than 50 USD. Such a moderate R2 is not the best one to apply the model to perform predictions. However, we can deduce the most important features that determine the listing prices if we compute the [Gini importances](https://medium.com/the-artificial-impostor/feature-importance-measures-for-tree-models-part-i-47f187c1a2c3), as done in the following diagram. The top-5 variables that determine the price of a listing are:
@@ -123,7 +123,7 @@ The models tend to under-predict accommodation prices; that bias clearly increas
 - and whether the housing is located in Donostia-San Sebastian.
 
 <p align="center">
-<img src="/pics/regression_feature_importance_rf.png" alt="Feature importance: Gini importance values of the random forests model" width="600"/>
+<img src="./pics/regression_feature_importance_rf.png" alt="Feature importance: Gini importance values of the random forests model" width="600"/>
 </p>
 
 Note that only the top-30 features are shown; these account for almost 89% of the accumulated Gini importance (all 353 variables would account for 100%).
@@ -131,7 +131,7 @@ Note that only the top-30 features are shown; these account for almost 89% of th
 But how does increasing the value of each feature affect the price: does it contribute to an increase in price or a decrease? That can be observed in the following diagram, similar to the previous one. In contrast to the former, here the 30 regression coefficients with the largest magnitude are plotted - red bars are associated with features that decrease the price when they are increased, i.e., negative coefficients.
 
 <p align="center">
-<img src="/pics/regression_feature_importance_lm.png" alt="Feature importance according to the coefficient value in ridge regression" width="600"/>
+<img src="./pics/regression_feature_importance_lm.png" alt="Feature importance according to the coefficient value in ridge regression" width="600"/>
 </p>
 
 Being different models, different features appear in the ranking; in any case, both lists are consistent and provide valuable insights. For instance, we deduce that the price decreases the most when 
@@ -144,17 +144,24 @@ Being different models, different features appear in the ranking; in any case, b
 Finally, a very practical insight to close the pricing question: we can easily select the the accommodations which have a very good average review (above the 90% percentile) and yield a model price larger than the real one, as shown in the following figure. These are the likely bargains!
 
 <p align="center">
-<img src="/pics/economical_listings_geo.jpg" alt="Economical listings with high quality" width="800"/>
+<img src="./pics/economical_listings_geo.jpg" alt="Economical listings with high quality" width="800"/>
 </p>
 
 I prefer not post the URLs of the detected listings, but it is straightforward to obtain them using the notebooks of the linked repository :wink:.
 
 ## Future Work
 
-I don't really have time to continue with the project, but some extensions I image that could be worth trying:
+Even though the model has a moderate prediction capability, it seems to be good enough for interpretation. In order to improve the performance, we could try the following:
 
-- [ ] Add more features; e.g., price per person, average price in neighborhood, etc.
-- [ ] Use stratified models for clearly different groups; e.g., room type.
-- [ ] Create an NLP model that predicts the average review score from review texts.
-- [ ] Business question: how can one create a competitive listing?
+- Add more non-polynomial features; e.g., price per person, average price in neighborhood, etc.
+- Use stratified models for clearly different groups; e.g., room type.
+- Try to get more data-points. That is not really possible, since the dataset is fixed; however, in a real life scenario, we could probably improve the results if we had access to the data generation/collection.
+- Create an NLP model that predicts the average review score from review texts.
+- New business question: how can one create a competitive listing?
 
+## Authorship
+
+Mikel Sagardia, 2022.  
+No guarantees.
+
+Contact: [mikelsagardia.io](https://mikelsagardia.io)
