@@ -26,11 +26,28 @@ No guarantees
 	- 2.3 Python Code with Scikit-Learn
 	- 2.4 Python Lab: `02a_LAB_Transforming_Target.ipynb`
 3. [Training and Test Splits](#3.-Training-and-Test-Splits)
+  - 3.1 Python Implementation Snippet
+  - 3.2 Python Lab: `02b_LAB_Regression_Train_Test_Split.ipynb`
 4. [Cross-Validation](#4.-Cross-Validation)
+  - 4.1 Underfitting vs. Overfitting
+  - 4.2 Cross-Validation Approaches
+  - 4.3 Python Implementation Snippet
+  - 4.4 Python Lab: `02c_DEMO_Cross_Validation.ipynb`
 5. [Polynomial Regression](#5.-Polynomial-Regression)
 6. [Regularization Techniques](#6.-Regularization-Techniques)
+  - 6.1 The Bias-Variance Trade-Off
+  - 6.2 Regularization and Model Selection
+  - 6.3 Ridge Regression (L2)
+  - 6.4 Lasso Regression (L1)
+  - 6.5 Elastic Net: Hybrid Ridge and Lasso Regularization
+  - 6.6 Recursive Feature Elimination
 7. [Polynomial Features and Regularization](#7.-Polynomial-Features-and-Regularization)
 8. [Further Details on regularization](#8.-Further-Details-on-Regularization)
+  - Analytic Interpretation
+  - Geometric Interpretation
+  - Probabilistic Interpretation
+9. [Python Lab: Regularization](#9.-Python-Lab:-Regularization)
+10. [Peer-Reviewed Project](#10.-Peer-Reviewed-Project)
 
 ## 1. Introduction to Supervised Machine Learning
 
