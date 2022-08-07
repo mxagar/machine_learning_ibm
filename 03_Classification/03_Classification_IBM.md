@@ -19,6 +19,7 @@ No guarantees
 ## Overview of Contents
 
 1. [Logistic Regression (Week 1)](#1.-Logistic-Regression)
+2. [K Nearest Neighbors (Week 2)](#2.-K-Nearest-Neighbors)
 
 ## 1. Logistic Regression
 
@@ -127,7 +128,7 @@ LogisticRegressionCV
 
 Accuracy is a really bad metric for classification if we have imbalanced classes (which is often the case). Example: if we want to predict cancer and our dataset consists of 1% sick and 99% healthy; a simple model which always predicts "healthy" is wrong, but still accurate 99% of the time.
 
-The basis for computing classification metrics is the **confusion matrix**, which is the matrix that counts the cases for `real (True / False) x predicted (True / False)`.
+The basis for computing classification metrics is the **confusion matrix**, which is the matrix that counts the cases for `Real (Positive, Negative) x Predicted (Positive, Negative)`.
 
 In that matrix:
 
@@ -136,11 +137,17 @@ In that matrix:
 
 From the matrix, we compute the most common error metrics:
 
-- Accuracy: diagonal / all 4 cells
-- Precision (of Predicted Positives) = TP / (TP + FP) 
-- Recall or Sensitivity (wrt. Real Positives) = TP / (TP + FN)
-- Specificity: Precision for Negatives = TN / (FP + TN)
-- F1: harmonic mean between precision and recall; it is a nice trade-off between precision and recall, thus, a metric which is recommend by default: `F1 = 2 *(P*R)/(P+R)`
+- Accuracy: diagonal / all 4 cells = `(TP + TN) / (TP + FP + FN + TN)`
+- Precision (of Predicted Positives) = `TP / (TP + FP)` 
+- Recall or Sensitivity (wrt. Real Positives) = `TP / (TP + FN)`
+- Specificity: Precision for Negatives = `TN / (FP + TN)`
+- F1: harmonic mean between precision and recall; it is a nice trade-off between precision and recall, thus, a metric which is recommend by default: `F1 = 2 *(Precision*Recall)/(Precision+Recall)`
+
+Interpretation:
+
+- Precision: do we wan to assure that our predicted positives are correct?
+- Recall: do we want to capture all the true positives?
+- F1: a balance
 
 ![Error Measurements with the Confusion Matrix](./pics/error_measurements.png)
 
@@ -196,7 +203,11 @@ from sklearn.metrics import (precision_score, recall_score,
 
 ### 1.9 Python Lab: Human Activity
 
-In this notebook, the [Human Activity Recognition Using Smartphones Data Set ](https://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones?utm_medium=Exinfluencer&utm_source=Exinfluencer&utm_content=000026UJ&utm_term=10006555&utm_id=NA-SkillsNetwork-Channel-SkillsNetworkCoursesIBMML241ENSkillsNetwork31576874-2022-01-01) is used: users carried out a smartphone with an inertial sensor and carried out Activities of Daily Living (ADL); these activities are annotated/labeled as
+In this notebook, 
+
+`03a_LAB_Logistic_Regression_Error_Metrics.ipynb`,
+
+the [Human Activity Recognition Using Smartphones Data Set ](https://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones?utm_medium=Exinfluencer&utm_source=Exinfluencer&utm_content=000026UJ&utm_term=10006555&utm_id=NA-SkillsNetwork-Channel-SkillsNetworkCoursesIBMML241ENSkillsNetwork31576874-2022-01-01) is used: users carried out a smartphone with an inertial sensor and carried out Activities of Daily Living (ADL); these activities are annotated/labeled as
 
 - `WALKING`,
 - `WALKING UPSTAIRS`,
@@ -527,7 +538,11 @@ le.classes_
 
 ### 1.10 Python Example: Food Items
 
-This notebook shows a classification example in which 13260 food items with 17 nutrient values (features) are labelled (target) as to be consumed:
+This notebook,
+
+`lab_jupyter_logistic_regression.ipynb`,
+
+shows a classification example in which 13260 food items with 17 nutrient values (features) are labelled (target) as to be consumed:
 
 - in moderation,
 - less often,
@@ -644,3 +659,250 @@ coef_dict = get_feature_coefs(l1_model, 1, feature_cols)
 visualize_coefs(coef_dict)
 
 ```
+
+## 2. K Nearest Neighbors
+
+The gist behind the K Nearest Neighbors algorithm is that we look in the feature space the class of the K nearest data points to predict the class of a new point. K is a hyper-parameter which can be optimized.
+
+Usually:
+
+- Odd numbers of K are encouraged, because the voting results cannot be even.
+- The vote value can be weighted (inversely) by the distance from the dataset point to the inference point.
+
+We can have as many classes as we want; the algorithm barely changes. Usually, K is chosen as a multiple of the number of classes +1.
+
+![K Nearest Neighbors Example](./pics/knn_example.png)
+
+### 2.1 Decision Boundary
+
+We can draw a decision boundary and class regions according to the class prediction associated to each point in the feature space.
+
+Note that low values of K lead to overfitting, while very large values lead to underfitting; that's the bias-variance trade-off. And in the case of k-NN it is easy to understand intuitively why.
+
+In order to find the optimum K, the **elbow method** can be used: similarly as in a grid search, we try different values of K and plot the error. We'll see an elbow-shaped arm, with the low/minimum value in the elbow -- we take the associated K.
+
+![KNN Decision Boundary](./pics/knn_decision_boundary.png)
+
+However, note that we need to choose our error metric, and that depends on the business we're in:
+
+- Precision: do we wan to assure that our predicted positives are correct?
+- Recall: do we want to capture all the true positives?
+- F1: a balance
+
+### 2.2 Distance Measure
+
+We can define difference distance metrics between data points:
+
+1. Euclidean distance: `sqrt(sum(x_i^2))`
+2. Manhattan distance: `sqrt(sum(abs(x_i)))`
+
+Since we are measuring distances, scaling the features is very important.
+
+### 2.3 Regression
+
+Regression can be performed very easily: instead of selecting a class, we compute the weighted average of the target value associated with the K closest data points.
+
+If `K = 1` is chosen, we perform a linear interpolation between the dataset points. If larger values of K are chosen, the predicted target is smoothed; if we take `K = all`, we predict the mean target value.
+
+![KNN Regression](./pics/knn_regression.png)
+
+### 2.4 Pros and Cons
+
+Pros:
+
+- Simple to implement.
+- Adapts well as new training data.
+- Easy to interpret: finding the most similar data points is very powerful, since we can go beyond target prediction; imagine data points are customers.
+- Fast training: simply data is stored. 
+
+Cons:
+
+- Slow inference because many distance calculations.
+- There is no model: there is no insight into the data generating process.
+- A lot of memory is required: the model needs to store all the data points for prediction!
+- When there are many predictors/features, KNN accuracy can break down due to the curse of dimensionality. That is because the distances start to increase as we increase the dimensionality.
+
+**In summary, if the feature space is not highly dimensional and we don't have that much data points, KNN is a good choice, moreover, it is highly interpretable.**
+
+### 2.5 KNN in Python with Scikit-Learn
+
+```python
+# Here we have the classes fpr both Classification and Regression
+# Both are used analogously
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+
+# Instantiate the class and choose K
+KNN = KNeighborsClassifier(n_neighbors=3)
+
+# Fit to the dataset
+# Both X and y need to be numerically encoded, as always
+# X must be scaled
+# y can be label encoded
+KNN = KNN.fit(X_train, y_train)
+
+# Predict
+y_pred = KNN.predict(X_test)
+```
+
+### 2.6 Python Lab: Customer Churn Classification
+
+In this notebook,
+
+`03b_LAB_KNN.ipynb`,
+
+the K Nearest Neighbors classifier is tested with a dataset that records the customer data of a fictional telecom; there are 7043 data-points and 23 variables. The target variable is whether the customers churned or not: `churn_value`.
+
+The data has no missing values, but many categorical variables need to be encoded. After the encoding (rather straightforward), several KNN models are defined and fit; the optimum `K` value is deduced with the elbow method.
+
+Steps:
+
+1. Load dataset
+2. Inspect Variable Types: Categorical, Ordinal, Numerical
+3. Encode Variables
+4. KNN Model Definition and Training
+5. Elbow Method: Find the Optimum K
+
+
+```python
+
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
+import pandas as pd, numpy as np, matplotlib.pyplot as plt, os, sys, seaborn as sns
+
+### -- 1. Load dataset
+
+#df = pd.read_csv("https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-ML241EN-SkillsNetwork/labs/datasets/churndata_processed.csv")
+df = pd.read_csv("data/churndata_processed.csv")
+
+df.shape
+round(df.describe(),2)
+
+### -- 2. Inspect Variable Types: Categorical, Ordinal, Numerical
+
+# Create a dataframe which records the number of unique variables values
+# for each variable
+df_uniques = pd.DataFrame([[i, len(df[i].unique())] for i in df.columns], columns=['Variable', 'Unique Values']).set_index('Variable')
+
+binary_variables = list(df_uniques[df_uniques['Unique Values'] == 2].index)
+categorical_variables = list(df_uniques[(6 >= df_uniques['Unique Values']) & (df_uniques['Unique Values'] > 2)].index)
+
+# Display categorical variable values
+[[i, list(df[i].unique())] for i in categorical_variables]
+
+ordinal_variables = ['contract', 'satisfaction', 'months']
+numeric_variables = list(set(df.columns) - set(ordinal_variables) - set(categorical_variables) - set(binary_variables))
+
+df[numeric_variables].hist(figsize=(12, 6))
+
+# If we have very skewed distributions, 
+# consider converting it into a categorical!
+df['months'] = pd.cut(df['months'], bins=5)
+
+### -- 3. Encode Variables
+
+from sklearn.preprocessing import LabelBinarizer, LabelEncoder, OrdinalEncoder
+
+lb, le = LabelBinarizer(), LabelEncoder()
+
+# We can use label encoding for ordinal variables
+# because they are already ordered; but that's not always the case
+for column in ordinal_variables:
+    df[column] = le.fit_transform(df[column])
+
+# Note how we binarize the selected columns only
+for column in binary_variables:
+    df[column] = lb.fit_transform(df[column])
+
+categorical_variables = list(set(categorical_variables) - set(ordinal_variables))
+
+# Note how we create dummies of selected columns only
+df = pd.get_dummies(df, columns = categorical_variables, drop_first=True)
+
+from sklearn.preprocessing import MinMaxScaler
+mm = MinMaxScaler()
+
+for column in [ordinal_variables + numeric_variables]:
+    df[column] = mm.fit_transform(df[column])
+
+outputfile = 'data/churndata_processed_encoded.csv'
+df.to_csv(outputfile, index=False)
+
+### -- 4. KNN Model Definition and Training
+
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report, f1_score
+
+# Set up X and y variables
+y, X = df['churn_value'], df.drop(columns='churn_value')
+# Split the data into training and test samples
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+
+# Estimate KNN model and report outcomes
+knn = KNeighborsClassifier(n_neighbors=3)
+knn = knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+# Preciision, recall, f-score from the multi-class support function
+print(classification_report(y_test, y_pred))
+print('Accuracy score: ', round(accuracy_score(y_test, y_pred), 2))
+print('F1 Score: ', round(f1_score(y_test, y_pred), 2))
+
+# Plot confusion matrix
+sns.set_palette(sns.color_palette())
+_, ax = plt.subplots(figsize=(12,12))
+ax = sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', annot_kws={"size": 40, "weight": "bold"})  
+labels = ['False', 'True']
+ax.set_xticklabels(labels, fontsize=25);
+ax.set_yticklabels(labels[::-1], fontsize=25);
+ax.set_ylabel('Prediction', fontsize=30);
+ax.set_xlabel('Ground Truth', fontsize=30)
+
+### -- 5. Elbow Method: Find the Optimum K
+
+# We compute model metrics for different K values
+# and plot them; the best K value is the one with
+# the best metric (high performance or low error)
+
+max_k = 40
+f1_scores = list()
+error_rates = list() # 1-accuracy
+
+for k in range(1, max_k):
+    
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    knn = knn.fit(X_train, y_train)
+    
+    y_pred = knn.predict(X_test)
+    f1 = f1_score(y_pred, y_test)
+    f1_scores.append((k, round(f1_score(y_test, y_pred), 4)))
+    error = 1-round(accuracy_score(y_test, y_pred), 4)
+    error_rates.append((k, error))
+    
+f1_results = pd.DataFrame(f1_scores, columns=['K', 'F1 Score'])
+error_results = pd.DataFrame(error_rates, columns=['K', 'Error Rate'])
+
+# Plot F1 results
+sns.set_context('talk')
+sns.set_style('ticks')
+
+plt.figure(dpi=300)
+ax = f1_results.set_index('K').plot(figsize=(12, 12), linewidth=6)
+ax.set(xlabel='K', ylabel='F1 Score')
+ax.set_xticks(range(1, max_k, 2));
+plt.title('KNN F1 Score')
+plt.savefig('knn_f1.png')
+
+```
+
+
+### 2.7 Python Example: Tumor Classification
+
+In this noetebook,
+
+`lab_jupyter_knn.ipynb`,
+
+a KNN model is trained to fit the 
+
