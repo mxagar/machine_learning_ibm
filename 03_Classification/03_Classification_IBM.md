@@ -944,4 +944,143 @@ def evaluate_metrics(yt, yp):
 
 ## 3. Support Vector Machines
 
-Support Vector Machines (SVM)
+Support Vector Machines (SVM) are also called **Large Margin Classifiers** because they compute hyperplanes which are equidistant to the boundary data-points of the classes they separate. In other words, we maximize the region between different classes with a hyperplane and a margin value. Those boundary points are the *support vectors*.
+
+It is intuitive to understand that the larger the margin, the more stable the model is.
+
+![SVM: Large Margin Classifier](./pics/svm_large_margin_classifier.png)
+
+### 3.1 Cost Function: Hinge Loss
+
+The model of the SVM is very similar to the linear regression; however, this time, we have another cost function. The cost function is similar to the one in the logistic regression, but instead of having a smooth decay, we have a non-linear hinge cost function. The cost starts to increase linearly when we trespass the margin hyperplane that touches one support or boundary point.
+
+This is a fundamental difference: in SVMs, only wrongly classified data-points are penalized, while in logistic regression there is always a penalization (because we have a smooth cost function).
+
+![SVM Cost Function](./pics/svm_cost_function.png)
+
+### 3.2 Model and Regularization
+
+The SVM model uses regularization via the parameter `C`: it is the inverse of `alpha` or `lambda` regularization strength in linear/logistic regression; i.e., small values of `C` lead to less complex models that avoid overfitting.
+
+The regularization is done as always: we add an aggregate of the parameters to the model mis-classification cost.
+
+The model parameters `beta` represent the normal vector of the separating hyperplanes. Thus the dot product between the `beta` vector and any data-point is the *signed* distance from the point to the decision boundary. Thus, the distance yields the class.
+
+The larger a parameter is, the larger its effect on the distance, i.e., on the final class.
+
+![SVM Coefficient Interpretation](./pics/svm_coefficient_interpretation.png)
+
+### 3.3 SVM Syntax in Scikit-Learn
+
+We distinguish between:
+
+- Linear SVMs, as explained so far.
+- Kernel-based SVMs, explained below.
+
+Here, the syntax for linear SVMs is shown; take also into account that we can create regression objects!
+
+Note that in SVMs we don't predict probabilities, but class labels!
+
+As usual, we can find the best hyperparameter values with `GridSearchCV`.
+
+```python
+# Imports
+# LinearSVC: Classification
+# LinearSVM: Regression
+from sklearn.svm import LinearSVC, LinearSVR
+
+# Instantiate
+# Regularization: L2, C
+LinSVC = LinearSVC(penalty='l2', C=10.0)
+
+# Fit and Predict
+LinSVC = LinSVC.fit(X_train, y_train)
+# We predict class labels, not probabilities!
+y_pred = LinSVC.predict(X_test)
+```
+
+### 3.4 SVMs with Kernels: Gaussian Kernels
+
+SVMs as we've seen so far are linear, i.e., they use linear boundaries that consist in hyperplanes.
+
+However, if we use the **kernel trick** we can represent non-linear boundaries. The idea is that we find a feature space of higher dimensions in which the boundary is still linear, but when projected onto the original feature space, it is highly non-linear.
+
+![Non-linear SVMs: The Kernel Trick](./pics/svm_kernel_trick.png)
+
+The basic idea behind is to use similarity functions: all points from a class become landmarks against which a similarity of new point `x` is computed; the similarity value can be the distance between `x` and any landmark. That similarity or distance value is used to evaluate a kernel:
+
+- Radial Basis Function (RBF): a Gaussian; most common kernel
+- Linear: no modification
+- Polynomial: a polynomial using the similarity
+- etc.
+
+So, basically, Gaussian blobs are defined with the distances from any point `x` to all data-points in the dataset. Then, the separation boundaries are found in that high-dimensional space.
+
+![SVM Gaussian Kernel](./pics/svm_gausssian_kernel.png)
+
+### 3.5 What to Use When?
+
+Now, we have many options:
+
+- Linear vs. Non-linear SVM vs. Logistic regression
+- If non-linear SVM: Gaussian or Polynomial Kernel
+
+Additionally, there is another option, which consists in using kernel approximations. The motivation behind is that SVMs with RBFs are very slow to train if there are lots of features or data. The kernel approximations overcome that issue, while dropping small amounts of efficiency. Any linear model can be converted into non-linear with the approximate kernel mappings.
+
+Which approach should we choose when?
+
+The answer is summarized in the following image/table; it depends on the amount of features and data-points we have.
+
+![SVM Models: Which One Should We Choose?](./pics/svm_choose_model.png)
+
+
+### 3.6 Non-Linear SVM Syntax in Scikit-Learn
+
+Important note: we can use non-linear SVMs with a linear kernel, but that would be slower: if we want linear SVMs, we should use `LinearSVM`, else, `SVM` with a desired kernel.
+
+As usual, we can find the best hyperparameter values with `GridSearchCV`: `C, gamma, n_components`.
+
+```python
+# Imports
+# SVC: Classification
+# SVR: Regression
+from sklearn.svm import SCV, SVR, LinearSVC
+
+# Instantiate
+# C: Regularization
+# gamma: influence of a single example (like inverse of the variance in the Gaussian; see doc)
+# Use GridSearchCV to find best values
+rbfSVC = SVC(kernel='rbf', gamma=1.0, C=10.0)
+
+# Fit and Predict
+rbfSVC = rbfSVC.fit(X_train, y_train)
+y_pred = rbfSVC.predict(X_test)
+
+### -- Approximate Kernel Mappings
+
+# Kernel mappings are used in a different manner
+# We map the data with them to higher dimensions
+# and then we apply a LinearSVC or any other classifier.
+
+# Imports
+from sklearn.kernel_approximation import Nystroem
+from sklearn.kernel_approximation import RBFSampler
+
+# Kernel approximation definition
+# n_components: instead of applying the kernel to all samples
+# we sample n_components and use them only to compute the kernel
+NystroemSVC = Nystroem(kernel="rbf", gamma=1.0, n_components=100)
+rbfSampler = RBFSampler(gamma=1.0, n_components=100)
+
+# We fit the kernel transfomer and transform the data
+X_train = NystroemSVC.fit_transform(X_train)
+X_test = NystroemSVC.transform(X_test)
+X_train = rbfSampler.fit_transform(X_train)
+X_test = rbfSampler.transform(X_test)
+# We instantiate a LinearSVC with the transformed data, fit and predict
+# Any linear model can be converted into non-linear with kernel mappings!
+clf = LinearSVC()
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+
+```
