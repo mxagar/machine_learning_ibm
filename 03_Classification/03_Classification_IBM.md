@@ -904,5 +904,21 @@ In this noetebook,
 
 `lab_jupyter_knn.ipynb`,
 
-a KNN model is trained to fit the 
+a KNN model is trained to fit the classifier to a tumor description dataset.
 
+Nothing really new is shown, compared to the previous notebook.
+
+A nice evaluation dictionary is built for each KNN classifier; nothing special, but nice:
+
+```python
+def evaluate_metrics(yt, yp):
+    results_pos = {}
+    results_pos['accuracy'] = accuracy_score(yt, yp)
+    # Precision, Recall and F1 are class-specific!
+    # But we compute the type of average values we'd like
+    precision, recall, f_beta, _ = precision_recall_fscore_support(yt, yp, average='binary')
+    results_pos['recall'] = recall
+    results_pos['precision'] = precision
+    results_pos['f1score'] = f_beta
+    return results_pos
+```
