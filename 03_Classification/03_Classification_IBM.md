@@ -19,7 +19,26 @@ No guarantees
 ## Overview of Contents
 
 1. [Logistic Regression (Week 1)](#1.-Logistic-Regression)
+  - 1.1 What is Classification?
+  - 1.2 Logistic Regression
+  - 1.3 Classification with Multiple Classes
+  - 1.4 Logistic Regression in Python with Scikit-Learn
+  - 1.5 Classification Error Metrics: Confusion Matrix, Accuracy, Specificity, Precision, and Recall
+  - 1.6 ROC and Precision-Recall Curves
+  - 1.7 Multi-Class Metrics
+  - 1.8 Metrics in Python with Scikit-Learn
+  - 1.9 Python Lab: Human Activity
+  - 1.10 Python Example: Food Items
 2. [K Nearest Neighbors (Week 2)](#2.-K-Nearest-Neighbors)
+  - 2.1 Decision Boundary
+  - 2.2 Distance Measure
+  - 2.3 Regression
+  - 2.4 Pros and Cons
+  - 2.5 KNN in Python with Scikit-Learn
+  - 2.6 Python Lab: Customer Churn Classification
+  - 2.7 Python Example: Tumor Classification
+3. [Support Vector Machines (Week 3)](#3.-Support-Vector-Machines)
+
 
 ## 1. Logistic Regression
 
@@ -922,3 +941,7 @@ def evaluate_metrics(yt, yp):
     results_pos['f1score'] = f_beta
     return results_pos
 ```
+
+## 3. Support Vector Machines
+
+Support Vector Machines (SVM)
