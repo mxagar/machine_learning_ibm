@@ -1046,7 +1046,7 @@ As usual, we can find the best hyperparameter values with `GridSearchCV`: `C, ga
 # Imports
 # SVC: Classification
 # SVR: Regression
-from sklearn.svm import SCV, SVR, LinearSVC
+from sklearn.svm import SVC, SVR, LinearSVC
 # SGDClassifier: Linear classifiers (SVM, logistic regression, etc.) with SGD training;
 # depending on the loss, a model is used - default loss: hinge -> SVM
 from sklearn.linear_model import SGDClassifier
