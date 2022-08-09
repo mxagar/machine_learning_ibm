@@ -916,7 +916,6 @@ plt.savefig('knn_f1.png')
 
 ```
 
-
 ### 2.7 Python Example: Tumor Classification
 
 In this noetebook,
@@ -952,7 +951,7 @@ It is intuitive to understand that the larger the margin, the more stable the mo
 
 ### 3.1 Cost Function: Hinge Loss
 
-The model of the SVM is very similar to the linear regression; however, this time, we have another cost function. The cost function is similar to the one in the logistic regression, but instead of having a smooth decay, we have a non-linear hinge cost function. The cost starts to increase linearly when we trespass the margin hyperplane that touches one support or boundary point.
+The model of the SVM is very similar to the linear regression; however, this time, we have another cost function. The cost function is similar to the one in the logistic regression, but instead of having a smooth decay, we have a non-linear **hinge cost function**. The cost starts to increase linearly when we trespass the margin hyperplane that touches one support or boundary point.
 
 This is a fundamental difference: in SVMs, only wrongly classified data-points are penalized, while in logistic regression there is always a penalization (because we have a smooth cost function).
 
@@ -967,6 +966,8 @@ The regularization is done as always: we add an aggregate of the parameters to t
 The model parameters `beta` represent the normal vector of the separating hyperplanes. Thus the dot product between the `beta` vector and any data-point is the *signed* distance from the point to the decision boundary. Thus, the distance yields the class.
 
 The larger a parameter is, the larger its effect on the distance, i.e., on the final class.
+
+Since we are using distances, again, scaling the features is essential!
 
 ![SVM Coefficient Interpretation](./pics/svm_coefficient_interpretation.png)
 
@@ -1014,7 +1015,7 @@ The basic idea behind is to use similarity functions: all points from a class be
 - Polynomial: a polynomial using the similarity
 - etc.
 
-So, basically, Gaussian blobs are defined with the distances from any point `x` to all data-points in the dataset. Then, the separation boundaries are found in that high-dimensional space.
+So, basically, Gaussian blobs are defined with the distances from any point `x` to all data-points in the dataset. Then, the separation boundaries are found in that high-dimensional space. Note that the new features are the output of the kernels that use the similarities. So we have so many features are data-points in the training set.
 
 ![SVM Gaussian Kernel](./pics/svm_gausssian_kernel.png)
 
@@ -1033,6 +1034,7 @@ The answer is summarized in the following image/table; it depends on the amount 
 
 ![SVM Models: Which One Should We Choose?](./pics/svm_choose_model.png)
 
+Kernel approximations do not compute the same amount of kernels as data-points; instead, we specify the number of kernels as `n_components`.
 
 ### 3.6 Non-Linear SVM Syntax in Scikit-Learn
 
@@ -1045,6 +1047,9 @@ As usual, we can find the best hyperparameter values with `GridSearchCV`: `C, ga
 # SVC: Classification
 # SVR: Regression
 from sklearn.svm import SCV, SVR, LinearSVC
+# SGDClassifier: Linear classifiers (SVM, logistic regression, etc.) with SGD training;
+# depending on the loss, a model is used - default loss: hinge -> SVM
+from sklearn.linear_model import SGDClassifier
 
 # Instantiate
 # C: Regularization
@@ -1067,8 +1072,9 @@ from sklearn.kernel_approximation import Nystroem
 from sklearn.kernel_approximation import RBFSampler
 
 # Kernel approximation definition
-# n_components: instead of applying the kernel to all samples
+# n_components: instead of applying the kernel to all samples, we define the number of landmarks for similarity computation
 # we sample n_components and use them only to compute the kernel
+# note that these are the new features
 NystroemSVC = Nystroem(kernel="rbf", gamma=1.0, n_components=100)
 rbfSampler = RBFSampler(gamma=1.0, n_components=100)
 
@@ -1079,8 +1085,184 @@ X_train = rbfSampler.fit_transform(X_train)
 X_test = rbfSampler.transform(X_test)
 # We instantiate a LinearSVC with the transformed data, fit and predict
 # Any linear model can be converted into non-linear with kernel mappings!
-clf = LinearSVC()
-clf.fit(X_train, y_train)
-y_pred = clf.predict(X_test)
+sgd = SGDClassifier()  # loss="hinge" by default, so a SVM is used
+linSVC = LinearSVC()
+linSVC.fit(X_train, y_train)
+sgd.fit(X_train, y_train)
+y_pred = linSVC.predict(X_test)
+y_pred = sgd.predict(X_test)
 
 ```
+
+### 3.7 Python Lab: Wine Classification
+
+In this notebook,
+
+`03c_DEMO_SVM.ipynb`,
+
+the dataset `data/Wine_Quality_Data.csv` is used, in which we have 6497 wines registered with 13 variables each. All variables are real numerical values, except `quality`, which is an ordinal score/integer, and `color`, which can be `red` or `white`. In the notebook, the `color` class is predicted using the two independent variables that have the highest correlation magnitude with the color: `volatile_acidity` and `total_sulfur_dioxide`. Two variables are chosen to be able to plot the feature space.
+
+The most interesting part is probably the plotting of the classification regions: colored regions with decision boundaries are plotted. Example:
+
+![Decision boundary](./pics/decision_boundary_wine.png)
+
+Steps:
+
+1. Load dataset, inspect it, select variables
+2. Function to plot the decision boundary
+3. Plot Decision Boundaries with Varied Hyperparameters
+4. Runtime Comparison: SVC witn RBF kernel, SGD with linear SVM using Nystroem sampling and kernel approximation
+
+```python
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
+import numpy as np, pandas as pd, matplotlib.pyplot as plt, seaborn as sns
+
+### -- 1. Load dataset, inspect it, select variables
+
+#data = pd.read_csv("https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-ML241EN-SkillsNetwork/labs/datasets/Wine_Quality_Data.csv", sep=',')
+data = pd.read_csv("data/Wine_Quality_Data.csv")
+data.shape # (6497, 13)
+
+# Encode target as integer/boolean
+y = (data['color'] == 'red').astype(int) # Binary classification: target is 1 or 0
+fields = list(data.columns[:-1]) # everything except "color"
+# Compute correlations
+correlations = data[fields].corrwith(y) # correlations with target array y
+correlations.sort_values(inplace=True) #
+
+# Scatterplots between all numerical variables: we see that red/white wines can be separated
+sns.set_context('talk')
+sns.set_style('white')
+sns.pairplot(data, hue='color')
+
+# Take the two most correlated variables and scale them
+# These are going to be the predictor variables
+# Only 2 in order to plot the decision boundaries
+from sklearn.preprocessing import MinMaxScaler
+
+fields = correlations.map(abs).sort_values().iloc[-2:].index
+print(fields) # Index(['volatile_acidity', 'total_sulfur_dioxide'], dtype='object')
+X = data[fields]
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X)
+X = pd.DataFrame(X, columns=['%s_scaled' % fld for fld in fields])
+print(X.columns) # Index(['volatile_acidity_scaled', 'total_sulfur_dioxide_scaled'], dtype='object')
+
+### -- 2. Function to plot the decision boundary
+
+def plot_decision_boundary(estimator, X, y, label_0, label_1):
+    estimator.fit(X, y)
+    X_color = X.sample(300) # We take only 300 points, because otherwise we have too many points
+    y_color = y.loc[X_color.index] # We take the associated y values of the sampled X points
+    y_color = y_color.map(lambda r: 'red' if r == 1 else 'yellow')
+    x_axis, y_axis = np.arange(0, 1, .005), np.arange(0, 1, .005) # very fine cells
+    xx, yy = np.meshgrid(x_axis, y_axis) # cells created
+    xx_ravel = xx.ravel()
+    yy_ravel = yy.ravel()
+    X_grid = pd.DataFrame([xx_ravel, yy_ravel]).T
+    y_grid_predictions = estimator.predict(X_grid) # for each cell, predict values
+    y_grid_predictions = y_grid_predictions.reshape(xx.shape)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.contourf(xx, yy, y_grid_predictions, cmap=plt.cm.autumn_r, alpha=.3) # plot regions and boundary
+    ax.scatter(X_color.iloc[:, 0], X_color.iloc[:, 1], color=y_color, alpha=1) # 300 sampled data-points
+    ax.set(
+        xlabel=label_0,
+        ylabel=label_1,
+        title=str(estimator))
+
+### -- 3. Plot Decision Bounadries with Varied Hyperparameters
+
+# Here, different decision boundaries
+# of an SVC with varied C and gamma values are plotted.
+# An example figure is above, prior to the code.
+
+from sklearn.svm import SVC
+
+# Insights:
+# - Higher values of gamma lead to LESS regularization, i.e., more curvy and complex models
+# - Higher values of C lead to LESS regularization, i.e., more curvy and complex models 
+
+gammas = [.5, 1, 2, 10]
+for gamma in gammas:
+    SVC_Gaussian = SVC(kernel='rbf', gamma=gamma)
+    plot_decision_boundary(SVC_Gaussian, X, y, label_0=fields[0], label_1=fields[1])
+
+Cs = [.1, 1, 10]
+for C in Cs:
+    SVC_Gaussian = SVC(kernel='rbf', gamma=2, C=C)
+    plot_decision_boundary(SVC_Gaussian, X, y, label_0=fields[0], label_1=fields[1])
+
+### -- 4. Runtime Comparison: SVC witn RBF kernel, SGD with linear SVM using Nystroem sampling and kernel approximation
+
+# Conclusions:
+# - Approximate kernels used on linear SVMs are 14-92x faster than using SVM with RBF
+# - The difference in speed is larger as we increase the number of data-points; that is expected, since all data-points are used as landmarks in the non-linear SVM model.
+
+from sklearn.kernel_approximation import Nystroem
+from sklearn.svm import SVC
+from sklearn.linear_model import SGDClassifier
+
+y = data.color == 'red'
+X = data[data.columns[:-1]]
+
+kwargs = {'kernel': 'rbf'}
+svc = SVC(**kwargs)
+nystroem = Nystroem(**kwargs) # n_components=100 by default: landmarks for similarity computation = new features
+# SGDClassifier: Linear classifiers (SVM, logistic regression, etc.) with SGD training.
+sgd = SGDClassifier() # loss="hinge" by default, so a SVM is used
+
+%%timeit
+svc.fit(X, y) # 507 ms ± 3.95 ms per loop, 7 runs
+
+%%timeit
+X_transformed = nystroem.fit_transform(X)
+sgd.fit(X_transformed, y) # 36.9 ms ± 4.22 ms per loop, 7 runs
+
+X2 = pd.concat([X]*5)
+y2 = pd.concat([y]*5)
+
+print(X2.shape)
+print(y2.shape)
+
+%timeit svc.fit(X2, y2) # 12.3 s ± 156 ms per loop, 7 runs
+
+%%timeit
+X2_transformed = nystroem.fit_transform(X2)
+sgd.fit(X2_transformed, y2) # 133 ms ± 13 ms per loop, 7 runs
+
+```
+
+### 3.8 Python Example: Food Item Classification
+
+In this notebook,
+
+`lab_jupyter_svm.ipynb`,
+
+the dataset `data/ood_items_binary.csv` is used to apply the SVM classifier. No new things are really tried, except a grid search with which different kernels are tested. Additionally, the support vectors are grabbed with `model.support_vectors_` and displayed in the decision boundary plot.
+
+```python
+params_grid = {
+    'C': [1, 10, 100],
+    'kernel': ['poly', 'rbf', 'sigmoid']
+}
+
+model = SVC()
+
+# Define a GridSearchCV to search the best parameters
+grid_search = GridSearchCV(estimator = model, 
+                           param_grid = params_grid, 
+                           scoring='f1',
+                           cv = 5, verbose = 1)
+# Search the best parameters with training data
+grid_search.fit(X_train, y_train.values.ravel())
+best_params = grid_search.best_params_
+
+best_params # {'C': 100, 'kernel': 'rbf'}
+```
+
+
