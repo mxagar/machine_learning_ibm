@@ -1275,4 +1275,38 @@ best_params # {'C': 100, 'kernel': 'rbf'}
 
 ## 4. Decision Trees
 
+### 4.1 Introduction to Decision Trees
+
+Decision trees are binary trees that split the dataset in every node in two. In each node, a threshold for a variable is defined: `x_1 > t ?`. We can perform classification or regression:
+
+- In classification, the leaves of the tree contain the most probable class for the sequence of splits carried out to reach the leave.
+- In regression, the leaves contain the average target value of the subset of the dataset that is conform to the sequence of node thresholds applied to reach the leaves. Thus, often the prediction can have the form of a staircase.
+
+![Decision Trees: Classification](./pics/decision_trees_classification.png)
+
+The `max_depth` of the decision tree is an important hyperparameter that influences the outcome significantly, since it controls how finely the dataset is split. Note that low depth values lead to underfitting, while large depth values lead to overfitting -- thus a trade-off must be found.
+
+![Decision Trees: Regression](./pics/decision_trees_regression.png)
+
+### 4.2 Building a Decision Tree
+
+We split the tree adding nodes until we reach a condition. That condition can be of 3 types:
+
+- Until all leaves contain pure data-points, i.e., all are of the same class; that tends to overfit the model. Therefore, the next two are more common, because they can prevent overfitting.
+- Until a `max_depth` is achieved; then, we take the class of the majority in each leave.
+- Until a performance metric achieved, e.g., classification has a certain accuracy.
+
+Splits are done so that information gain is maximized. Information gain is related to the error. A greedy approach is taken with which many possible questions are tried in each new node and the best question is selected; that optimum quality is given by the information gain or minimized error.
+
+In other words: information gain happens when the children nodes reduce the error associated to their parent. If a new split does not decrease that error, it's not a valid split and we don't continue. In order to compute the error of the children, we calculate the weighted sum of their errors; if that's larger or equal to the error of the parent node, there is no information gain.
+
+![Information Gain](./pics/information_gain.png)
+
+### 4.3 Entropy-based Splitting
+
+
+
+
+
+
 
