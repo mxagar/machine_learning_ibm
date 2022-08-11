@@ -38,7 +38,15 @@ No guarantees
   - 2.6 Python Lab: Customer Churn Classification
   - 2.7 Python Example: Tumor Classification
 3. [Support Vector Machines (Week 3)](#3.-Support-Vector-Machines)
-
+  - 3.1 Cost Function: Hinge Loss
+  - 3.2 Model and Regularization
+  - 3.3 SVM Syntax in Scikit-Learn
+  - 3.4 SVMs with Kernels: Gaussian Kernels
+  - 3.5 What to Use When?
+  - 3.6 Non-Linear SVM Syntax in Scikit-Learn
+  - 3.7 Python Lab: Wine Classification
+  - 3.8 Python Example: Food Item Classification
+4. [Decision Trees (Week 4)](#4.-Decision-Trees)
 
 ## 1. Logistic Regression
 
@@ -1264,5 +1272,7 @@ best_params = grid_search.best_params_
 
 best_params # {'C': 100, 'kernel': 'rbf'}
 ```
+
+## 4. Decision Trees
 
 
