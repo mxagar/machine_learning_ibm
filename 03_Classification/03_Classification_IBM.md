@@ -47,6 +47,16 @@ No guarantees
   - 3.7 Python Lab: Wine Classification with SVMs
   - 3.8 Python Example: Food Item Classification with SVMs
 4. [Decision Trees (Week 4)](#4.-Decision-Trees)
+  - 4.1 Introduction to Decision Trees
+  - 4.2 Building a Decision Tree
+  - 4.3 Entropy-based Splitting
+  - 4.4 Choosing Splitting Criteria
+  - 4.5 Pros and Cons of Decision Trees
+  - 4.6 Decision Trees' Syntax in Scikit-Learn
+  - 4.7 Python Lab: Wine Classification with Decision Trees
+  - 4.8 Python Example: Tumor Classification with Decision Trees
+5. [Ensemble-Based Methods and Bagging](#5.-Ensemble-Based-Methods-and-Bagging)
+
 
 ## 1. Logistic Regression
 
@@ -1401,6 +1411,8 @@ export_graphviz(DTC, out_file=dot_data, filled=True)
 graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
 
 # View the tree image and save it to a file
+# The nodes are color coded: each color belongs to a class,
+# the darker the color the more pure the contained data-points.
 filename = 'wine_tree.png'
 graph.write_png(filename)
 Image(filename=filename) 
@@ -1427,9 +1439,213 @@ Notes:
 
 Steps:
 
-1. A
+1. Load dataset and create the train/test split
+2. Instantiate a Decision Tree: Train it to overfit
+3. Decision Tree with Hyperparameter Tuning Using Grid Search
+4. Regression with Decision Trees
+5. Plotting of Decision Trees
+
 
 ```python
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
+import pandas as pd, numpy as np, matplotlib.pyplot as plt, seaborn as sns
+
+### -- 1. Load dataset and create the train/test split
+
+data = pd.read_csv("data/Wine_Quality_Data.csv", sep=',')
+
+data.head()
+data.dtypes
+
+# Encode target objects are integers
+data['color'] = data.color.replace('white',0).replace('red',1).astype(np.int)
+
+# All data columns except for color
+feature_cols = [x for x in data.columns if x not in 'color']
+
+# Since the dataset is imbalanced, we use `StratifiedShuffleSplit` for creating the train/test splits.
+from sklearn.model_selection import StratifiedShuffleSplit
+
+# Split the data into two parts with 1000 points in the test data
+# This creates a generator
+strat_shuff_split = StratifiedShuffleSplit(n_splits=1, test_size=1000, random_state=42)
+
+# Get the index values from the generator
+train_idx, test_idx = next(strat_shuff_split.split(data[feature_cols], data['color']))
+
+# Create the data sets
+X_train = data.loc[train_idx, feature_cols]
+y_train = data.loc[train_idx, 'color']
+
+X_test = data.loc[test_idx, feature_cols]
+y_test = data.loc[test_idx, 'color']
+
+# Check we have proportions in train/test splits
+y_train.value_counts(normalize=True).sort_index()
+y_test.value_counts(normalize=True).sort_index()
+
+### -- 2. Instantiate a Decision Tree: Train it to overfit
+
+from sklearn.tree import DecisionTreeClassifier
+
+# Note that we don't set any depth or feature limits
+# In that case, our decision tree will overfit the training dataset
+# We can use this overfit model to identify the maximum depth and feature numbers
+# for a grid search later on
+# Regularizing parameters:
+# - criterion: we can select different information curves to decide whether to further split: 'gini', 'entropy'
+# - max_features: maximum number of features to look at when we split
+# - max_depth: maximum allowed depth
+# - min_samples_leaf: minimum samples necessary to be a leaf (default: 1)
+dt = DecisionTreeClassifier(random_state=42)
+dt = dt.fit(X_train, y_train)
+
+# Counts
+dt.tree_.node_count, dt.tree_.max_depth
+# (171, 22)
+
+# We create a function which returns error metrics
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+def measure_error(y_true, y_pred, label):
+    return pd.Series({'accuracy':accuracy_score(y_true, y_pred),
+                      'precision': precision_score(y_true, y_pred),
+                      'recall': recall_score(y_true, y_pred),
+                      'f1': f1_score(y_true, y_pred)},
+                      name=label)
+
+# The error on the training and test data sets
+y_train_pred = dt.predict(X_train)
+y_test_pred = dt.predict(X_test)
+
+train_test_full_error = pd.concat([measure_error(y_train, y_train_pred, 'train'),
+                              measure_error(y_test, y_test_pred, 'test')],
+                              axis=1)
+
+# Note that the train split has almost no error: overfitting
+train_test_full_error
+#           train     test
+# accuracy  0.999818  0.984000
+# precision 0.999261  0.963710
+# recall    1.000000  0.971545
+# f1        0.999631  0.967611
+
+### -- 3. Decision Tree with Hyperparameter Tuning Using Grid Search
+
+from sklearn.model_selection import GridSearchCV
+
+# We define the search array maximum values to be the values of the overfit tree
+param_grid = {'max_depth':range(1, dt.tree_.max_depth+1, 2),
+              'max_features': range(1, len(dt.feature_importances_)+1)}
+
+# Grid search with cross validation to determine the optimum hyperparameters
+GR = GridSearchCV(DecisionTreeClassifier(random_state=42),
+                  param_grid=param_grid,
+                  scoring='accuracy',
+                  n_jobs=-1)
+
+GR = GR.fit(X_train, y_train)
+
+# Get best estimator: the tree and its parameters
+GR.best_estimator_.tree_.node_count, GR.best_estimator_.tree_.max_depth
+# (99, 7)
+
+# Compute the error metrics of the best estimator
+y_train_pred_gr = GR.predict(X_train)
+y_test_pred_gr = GR.predict(X_test)
+
+train_test_gr_error = pd.concat([measure_error(y_train, y_train_pred_gr, 'train'),
+                                 measure_error(y_test, y_test_pred_gr, 'test')],
+                                axis=1)
+
+train_test_gr_error
+#           train     test
+# accuracy  0.995816  0.989000
+# precision 0.998501  0.983539
+# recall    0.984479  0.971545
+# f1        0.991440  0.977505
+
+### -- 4. Regression with Decision Trees
+
+# Now, we define our target to be the numerical value residual_sugar
+feature_cols = [x for x in data.columns if x != 'residual_sugar']
+
+# Create the data sets
+X_train = data.loc[train_idx, feature_cols]
+y_train = data.loc[train_idx, 'residual_sugar']
+
+X_test = data.loc[test_idx, feature_cols]
+y_test = data.loc[test_idx, 'residual_sugar']
+
+# The DecisionTreeRegressor works as the DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor
+
+dr = DecisionTreeRegressor().fit(X_train, y_train)
+
+param_grid = {'max_depth':range(1, dr.tree_.max_depth+1, 2),
+              'max_features': range(1, len(dr.feature_importances_)+1)}
+
+GR_sugar = GridSearchCV(DecisionTreeRegressor(random_state=42),
+                     param_grid=param_grid,
+                     scoring='neg_mean_squared_error',
+                      n_jobs=-1)
+
+GR_sugar = GR_sugar.fit(X_train, y_train)
+
+GR_sugar.best_estimator_.tree_.node_count, GR_sugar.best_estimator_.tree_.max_depth
+# (7953, 25)
+
+# Since we are doinf regression, we need another error metric, e.g., the MSE
+from sklearn.metrics import mean_squared_error
+
+y_train_pred_gr_sugar = GR_sugar.predict(X_train)
+y_test_pred_gr_sugar  = GR_sugar.predict(X_test)
+
+train_test_gr_sugar_error = pd.Series({'train': mean_squared_error(y_train, y_train_pred_gr_sugar),
+                                         'test':  mean_squared_error(y_test, y_test_pred_gr_sugar)},
+                                          name='MSE').to_frame().T
+
+# When we do regression, the test error is usually larger
+# because our model yields the mean of a subset.
+train_test_gr_sugar_error
+#     train   test
+# MSE 0.00055 2.659874
+
+# We plot predictions vs. actual values
+sns.set_context('notebook')
+sns.set_style('white')
+fig = plt.figure(figsize=(6,6))
+ax = plt.axes()
+
+ph_test_predict = pd.DataFrame({'test':y_test.values,
+                                'predict': y_test_pred_gr_sugar}).set_index('test').sort_index()
+
+ph_test_predict.plot(marker='o', ls='', ax=ax)
+ax.set(xlabel='Test', ylabel='Predict', xlim=(0,35), ylim=(0,35));
+
+### -- 5. Plotting of Decision Trees
+
+from io import StringIO
+from IPython.display import Image
+from sklearn.tree import export_graphviz
+import pydotplus
+
+# Create an output destination for the file
+dot_data = StringIO()
+
+export_graphviz(dt, out_file=dot_data, filled=True)
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+
+# View the tree image
+# The nodes are color coded: each color belongs to a class,
+# the darker the color the more pure the contained data-points.
+filename = 'wine_tree.png'
+graph.write_png(filename)
+Image(filename=filename) 
 
 ```
 
@@ -1438,5 +1654,7 @@ Steps:
 Nothing really new is shown.
 
 The notebook: `./lab/lab_jupyter_decisiontree.ipynb`
+
+## 5. Ensemble-Based Methods and Bagging
 
 
