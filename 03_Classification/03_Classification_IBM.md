@@ -27,16 +27,16 @@ No guarantees
   - 1.6 ROC and Precision-Recall Curves
   - 1.7 Multi-Class Metrics
   - 1.8 Metrics in Python with Scikit-Learn
-  - 1.9 Python Lab: Human Activity
-  - 1.10 Python Example: Food Items
+  - 1.9 Python Lab: Human Activity with Logistic Regression
+  - 1.10 Python Example: Food Items with Logistic Regression
 2. [K Nearest Neighbors (Week 2)](#2.-K-Nearest-Neighbors)
   - 2.1 Decision Boundary
   - 2.2 Distance Measure
   - 2.3 Regression
   - 2.4 Pros and Cons
   - 2.5 KNN in Python with Scikit-Learn
-  - 2.6 Python Lab: Customer Churn Classification
-  - 2.7 Python Example: Tumor Classification
+  - 2.6 Python Lab: Customer Churn Classification with KNN
+  - 2.7 Python Example: Tumor Classification with KNN
 3. [Support Vector Machines (Week 3)](#3.-Support-Vector-Machines)
   - 3.1 Cost Function: Hinge Loss
   - 3.2 Model and Regularization
@@ -44,8 +44,8 @@ No guarantees
   - 3.4 SVMs with Kernels: Gaussian Kernels
   - 3.5 What to Use When?
   - 3.6 Non-Linear SVM Syntax in Scikit-Learn
-  - 3.7 Python Lab: Wine Classification
-  - 3.8 Python Example: Food Item Classification
+  - 3.7 Python Lab: Wine Classification with SVMs
+  - 3.8 Python Example: Food Item Classification with SVMs
 4. [Decision Trees (Week 4)](#4.-Decision-Trees)
 
 ## 1. Logistic Regression
@@ -1102,7 +1102,7 @@ y_pred = sgd.predict(X_test)
 
 ```
 
-### 3.7 Python Lab: Wine Classification
+### 3.7 Python Lab: Wine Classification with SVMs
 
 In this notebook,
 
@@ -1245,7 +1245,7 @@ sgd.fit(X2_transformed, y2) # 133 ms ± 13 ms per loop, 7 runs
 
 ```
 
-### 3.8 Python Example: Food Item Classification
+### 3.8 Python Example: Food Item Classification with SVMs
 
 In this notebook,
 
@@ -1304,9 +1304,139 @@ In other words: information gain happens when the children nodes reduce the erro
 
 ### 4.3 Entropy-based Splitting
 
+The most appropriate error metric is not classification error, but **entropy**.
 
+- The classification error/accuracy is: `1 - max(p(class_count/total)) = 1 - max(i:1:n; p(i|t))`.
+- The entropy is `-sum(i=1:n; p(i|t)*log2(p(i|t)))`.
 
+So, basically, we multiply the classification error/acccuracy by its `log2`.
 
+In the example above, we do have an information gain when entropy is used as a metric:
 
+![Information Gain with Entropy](./pics/information_gain_entropy.png)
+
+Note that the node class is the one that represents majority of class instances. As such, we have a singularity or peak when class instances are 50/50.
+
+### 4.4 Choosing Splitting Criteria
+
+The classification-based error/accuracy metric is basically a triangle: purity vs. error has a peak when purity is 0.5 (maximum ambiguity) and error increases/decreases linearly before and after the peak.
+
+![Classification Error Curve](./pics/classification_error_curve.png)
+
+We can derive the following insights:
+
+- Any split will be a point on the curve.
+- The weighted average is also a line; since we are connecting with a line two points on the error curve, the weighted averaging line will coincide with the error curve. Thus, the classification error of the parent node will be identical to the weighted average! Thus, the classification error does not work!
+
+In contrast, **the entropy metric is a bulgy curve above the line**! Thus, the weighted average line will be always *below* the bulgy curve, i.e., the parent error will be larger. Therefore, the entropy works: children's weighted error is lower that parent's and we can further split the nodes.
+
+![Entropy vs. Classification Error](./pics/entropy_vs_classification_error.png)
+
+However, note that usually the **Gini index** is used instead of the entropy, which is computed with the squared classification accuracy:
+
+`g = 1 - sum(i:1:m; p(i|t)^2)`
+
+The Gini index curve is also bulgy but the is no logarithm in it, so it's easier to compute!
+
+![Entropy vs. Classification vs. Gini](./pics/entropy_vs_classification_vs_gini.png)
+
+### 4.5 Pros and Cons of Decision Trees
+
+Decision trees are very prone to overfit the dataset: they learn noise. The solution to that is to prune the trees, which can be achieved with the methods mentioned in Section 4.2:
+
+- We force a `max_depth`.
+- We prune nodes that don't provide an information grain above a threshold. We can also use a simple classification error to that end.
+
+Decision trees have the following advantages:
+
+- They are easy to interpret following the if/then/else logic. That's a huge advantage in the business context.
+- The handle any data categories.
+- No scaling is required.
+
+### 4.6 Decision Trees' Syntax in Scikit-Learn
+
+In order to visualize the trees, we need to install PyDotPlus:
+
+```bash
+conda install -c conda-forge pydotplus
+```
+
+Then, the basics of usage are:
+
+```python
+# Imports
+# We can use the classifier or the regressor
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
+# Instantiate
+# We need to consider the following regularizing parameters:
+# - criterion: we can select different information curves to decide whether to further split: 'gini', 'entropy'
+# - max_features: maximum number of features to look at when we split
+# - max_depth: maximum allowed depth
+# - min_samples_leaf: minimum samples necessary to be a leaf (default: 1)
+DTC = DecisionTreeClassifier(criterion='gini', 
+                             max_features=10, 
+                             max_depth=5)
+
+# Fit
+DTC = DTC.fit(X_train, y_train)
+# Predict
+y_pred = DTC.predict(X_test)
+
+# Counts
+dt.tree_.node_count
+dt.tree_.max_depth
+
+## Visualize trees
+
+# Imports
+from io import StringIO
+from IPython.display import Image
+from sklearn.tree import export_graphviz
+import pydotplus
+
+# Create the graph
+dot_data = StringIO()
+export_graphviz(DTC, out_file=dot_data, filled=True)
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+
+# View the tree image and save it to a file
+filename = 'wine_tree.png'
+graph.write_png(filename)
+Image(filename=filename) 
+```
+
+### 4.7 Python Lab: Wine Classification with Decision Trees
+
+In this notebook,
+
+`03d_LAB_Decision_Trees.ipynb`,
+
+the dataset `data/Wine_Quality_Data.csv` is used, in which we have 6497 wines registered with 13 variables each. All variables are real numerical values, except `quality`, which is an ordinal score/integer, and `color`, which can be `red` or `white`.
+
+In the notebook, 
+
+- first, the `color` class is predicted using the rest of the variables;
+- then, the `residual_sugar` value is predicted using a regression;
+- finally, the trees are visualized using the package `pydotplus`.
+
+Notes:
+
+- Since the dataset is imbalanced, we use `StratifiedShuffleSplit` for creating the train/test splits.
+- First the trees without limits are compute; they overfit the dataset, but we can extract the maximum values for the parameters: depth and features. Then, we perform a grid search with a hyperparameter range defined with those values.
+
+Steps:
+
+1. A
+
+```python
+
+```
+
+### 4.8 Python Example: Tumor Classification with Decision Trees
+
+Nothing really new is shown.
+
+The notebook: `./lab/lab_jupyter_decisiontree.ipynb`
 
 
