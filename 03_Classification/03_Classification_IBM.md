@@ -1663,7 +1663,7 @@ The idea behind ensemble-based methods is to generate several models and to comb
 
 Bagging methods consist of several trees which are combined to overcome issues related to overfitting.
 
-The term **bagging** refers to **bootstrap aggregating**: we have several models and each one predicts a class; the final class is the class that the majority decides. In particular, trees are used in bagging.
+The term **bagging** refers to **bootstrap aggregating**: we have several models and each one predicts a class using a subset of the data-points for training; the final class is the class that the majority decides. In particular, trees are used in bagging.
 
 The bigger the number of trees, the smaller is the error until a point of diminishing return: often times the RMSE doesn't decrease more with more than about 50 trees.
 
@@ -1691,7 +1691,7 @@ y_pred = BC.predict(X_test)
 
 ### 5.2 Random Forests
 
-For `n` independent trees with a variance `s^2`, the bagged variance is `s^2/n`.
+IN bagging, for `n` independent trees with a variance `s^2`, the bagged variance is `s^2/n`.
 
 However, we perform bootstrapping: large numbers of smaller samples of the same size are repeatedly drawn, **with replacement**, from a single original sample.
 
@@ -1708,7 +1708,7 @@ How can we decrease the correlation? By introducing randomness, which de-correla
   - Classification: `sqrt(m)`
   - Regression: `m/3`
 
-In summary, **random forests** is bagging, but with a random subset of features allowed to each tree.
+In summary, **random forests** is a type of bagging, but with a random subset of features allowed to each tree, in addition to sampled data-points usual in bagging. The effect is that each individual tree has a weaker accuracy but overall we achieve a better score.
 
 Usually we need more trees than with bagging to plateau the decrease of the RMSE.
 
@@ -1736,6 +1736,10 @@ What if we want more randomness? Instead of choosing node feature splits greedil
 from sklearn.ensemble import ExtraTreesClassifier, ExtraTreesRegressor
 
 # Instantiate
+# Look always at the default parameter values
+# For instance, the ExtraTreesClassifier has bootstrap=False by default
+# so the model is fit on the entire dataset. That is so, because the key
+# is to perform random splits rather than random samplings.
 ET = ExtraTreesClassifier(n_estimators=50)
 
 # Fit and train
@@ -1743,3 +1747,143 @@ ET = ET.fit(X_train, y_train)
 y_pred = ET.predict(X_test)
 
 ```
+
+### 5.3 Python Demo: Random Forests
+
+The demo notebook `lab/Random_forest.ipynb` demonstrates empirically some theoretical concepts related to bagging and random forests:
+
+- The correlations between the `y_pred` arrays of each tree in a `BaggingClassifier` and a `RandomForestClassifier` are computed. Basically, the correlations between the internal model tree estimators are displayed in a heatmap. As expected, random forests have lower correlation values.
+- Exemplary resampling data-points (rows) and variables (feature columns) is shown.
+
+The practical part of the notebook performs a cancer cell classification with `GridSearchCV` using `RandomForestClassifier`:
+
+```python
+import pandas as pd
+import pylab as plt
+import numpy as np
+from sklearn import preprocessing
+from sklearn import metrics
+
+df = pd.read_csv("data/cell_samples.csv")
+
+# Remove non-numeric rows
+df= df[pd.to_numeric(df['BareNuc'], errors='coerce').notnull()]
+
+# Features
+X =  df[['Clump', 'UnifSize', 'UnifShape', 'MargAdh', 'SingEpiSize', 'BareNuc', 'BlandChrom', 'NormNucl', 'Mit']]
+
+# Target labels
+y=df['Class']
+y.value_counts() # 2: 444, 4: 239
+
+# Train/Test split
+# IMPORTANT NOTE: We should use StratifiedShuffleSplit
+X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=4)
+print ('Train set:', X_train.shape,  y_train.shape)
+print ('Test set:', X_test.shape,  y_test.shape)
+
+# Grid Search with Random Forests
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+
+model = RandomForestClassifier(random_state=42,
+                               n_jobs=-1) #  use all CPUs
+model.get_params().keys() # get all possible parameters of a RandomForestClassifier
+
+param_grid = {'n_estimators': [2*n+1 for n in range(20)],
+             'max_depth' : [2*n+1 for n in range(10) ],
+             'max_features':["auto", "sqrt", "log2"]}
+
+search = GridSearchCV(estimator=model, param_grid=param_grid,scoring='accuracy')
+search.fit(X_train, y_train)
+# GridSearchCV(estimator=RandomForestClassifier(),
+#              param_grid={'max_depth': [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+#                          'max_features': ['auto', 'sqrt', 'log2'],
+#                          'n_estimators': [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21,
+#                                           23, 25, 27, 29, 31, 33, 35, 37, 39]},
+#              scoring='accuracy')
+
+search.best_score_
+search.best_params_
+```
+
+The code snippet to compute the correlations of the trees/estimators within an ensemble model:
+
+```python
+# This function takes one Bagging or Random Forest model
+# and checks all the trees inside: these are the estimators.
+# Then, y_pred=estimator(X_test) is predicted with each tree/estimator.
+# So, we have for each tree a y_pred.
+# We compute the correlations of that matrix so that the correlations between estimators
+# are calculated.
+def get_correlation(X_test, y_test, models):
+    # This function calculates the average correlation between predictors  
+    n_estimators=len(models.estimators_)
+    prediction=np.zeros((y_test.shape[0],n_estimators))
+    predictions=pd.DataFrame({'estimator '+str(n+1):[] for n in range(n_estimators)})
+    
+    # Predictions are done for each estimator
+    # Each column is an estimator
+    for key,model in zip(predictions.keys(),models.estimators_):
+        predictions[key]=model.predict(X_test.to_numpy())
+    
+    corr=predictions.corr()
+    print("Average correlation between predictors: ", corr.mean().mean()-1/n_estimators)
+    return corr
+
+```
+
+### 5.4 Python Lab: Bagging
+
+Nothing really new is shown here. Probably the most interesting part is the one below:
+
+A `RandomForestClassifier` is trained with different numbers of estimators; that parameter is set in a loop for the same RF. Then, the *out-of-bag* error is computed (I understand it's the error out of sample) and all errors are plotted against the number of estimators chosen.
+
+Then, for the same model, we set as parameter the optimum number of estimators and the model **feature importances** are extracted.
+
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+
+# Initialize the random forest estimator
+# Note that the number of trees is not setup here
+RF = RandomForestClassifier(oob_score=True, # compute Out-of-bag score: score out of sample?
+                            random_state=42, 
+                            warm_start=True, # Re-use the previous result to fit new tree
+                            n_jobs=-1) # use all CPUs
+
+oob_list = list()
+
+# Iterate through all of the possibilities for 
+# number of trees
+for n_trees in [15, 20, 30, 40, 50, 100, 150, 200, 300, 400]:
+    
+    # Use this to set the number of trees
+    # We have instantiated the class, but we can change its params!
+    RF.set_params(n_estimators=n_trees)
+
+    # Fit the model
+    RF.fit(X_train, y_train)
+
+    # Get the oob error
+    oob_error = 1 - RF.oob_score_
+    
+    # Store it
+    oob_list.append(pd.Series({'n_trees': n_trees, 'oob': oob_error}))
+
+# Inspect how the out-of-bag error changes with the number of trees
+rf_oob_df = pd.concat(oob_list, axis=1).T.set_index('n_trees')
+rf_oob_df.plot(legend=False, marker='o', figsize=(14, 7), linewidth=5)
+
+# Set the optimum number of trees and extract feature importances.
+# Apparently, we don't need to train the model again.
+# I understand that's because the last trained model had 400 estimators;
+# so I guess we take 100 from those 400?
+model = RF.set_params(n_estimators=100)
+feature_imp = pd.Series(model.feature_importances_, index=feature_cols).sort_values(ascending=False)
+feature_imp.plot(kind='bar', figsize=(16, 6))
+```
+
+### 5.5 Python Demo: Bagging
+
+
