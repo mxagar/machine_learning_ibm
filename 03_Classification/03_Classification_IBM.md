@@ -1691,7 +1691,7 @@ y_pred = BC.predict(X_test)
 
 ### 5.2 Random Forests
 
-IN bagging, for `n` independent trees with a variance `s^2`, the bagged variance is `s^2/n`.
+In bagging, for `n` independent trees with a variance `s^2`, the bagged variance is `s^2/n`.
 
 However, we perform bootstrapping: large numbers of smaller samples of the same size are repeatedly drawn, **with replacement**, from a single original sample.
 
@@ -1895,5 +1895,160 @@ Several datasets are used also:
 - `data/ChurnData.csv`
 - `data/cell_samples.csv`
 - `data/drug200.csv`
+
+### 5.6 Boosting
+
+Bagging = bootstrapped aggregating; bootstrapping consists in sub-sampling the dataset for each tree with replacement, i.e., we might take one row in different sub-samples.
+
+Then, a tree is built for each sub-sample; in particular, random forests constrain the amount of features to be used in each tree.
+
+Boosting, on the other hand, have the following differences against bagging:
+
+- The entire dataset is taken, not a sub-sample.
+- Each estimator is a simple estimator that separates the dataset in 2 nodes or splits. Those separations are called **decision stumps** and estimators are called **weak learners**.
+- Estimators are not independent: successive estimators build upon the previous: the data-points that are incorrectly classified in a decision stump are more heavily weighted for the computation of the next split; that way, we reward the correction of errors or residuals. 
+- Each estimator gets a weighting factor. Better classifiers get more weight.
+- There is also a learning rate which affects the error correction weight at each step. The lower the learning rate, the less correction we apply. If it's to high (> 1), we can easily overfit.
+- All estimators are summed with their weighting factor to create more complex classification structures.
+
+![Overview of Boosting](./pics/boosting_overview.png)
+
+#### AdaBoost and Gradient Boosting
+
+Boosting uses different loss functions, the most popular are:
+
+- AdaBoost or adaptive boosting
+- Gradient boosting
+
+The loss function is computed as follows:
+
+- A decision stump is done: a threshold is chosen for a feature; points on one side belong to a class, the rest to the other class.
+- For each point a **margin** is computed; we can understand that margin has the magnitude of the distance to the threshold and
+  - it is positive if thepoint is correctly classified
+  - negative otherwise.
+- That margin is the variable with which we compute the loss function.
+
+A theoretical loss function would be to count `1` for miss-classified points (negative margin) and `0` for the correct ones; that's the *0-1 loss*, but it's not used in practice, because it's not differentiable.
+
+In practice, differentiable loss functions are used:
+
+- **AdaBoost** or adaptive boosting: `exp(-margin)`
+- **Gradient Boosting**: `log(1+exp(-margin))`
+
+The **Gradient Boosting** loss is not as steep as **AdaBoost**, and it often performs better, it's less sensitive to outliers.
+
+![Boosting Loss Functions](./pics/boosting_loss_functions.png)
+
+#### Comparing Bagging and Boosting
+
+![Comparing Bagging and Boosting](./pics/comparing_bagging_boosting.png)
+
+#### Tuning Gradient Boosting
+
+Key takeaway: With random forests, we increase the number of estimators until the test error plateaus; there's no risk of overfitting. However, with boosting, since we are continuously correcting the previous residuals, we do risk overfitting.
+
+Therefore:
+
+- We need to use cross-validation to detect the number of estimators in boosting.
+- We need to detect the correct learning rate that affects the correction of the residuals, too.
+
+In order to decrease the test error continuously with boosting and avoid overfitting, there are some approaches:
+
+- Set the learning rate to be below 1.0, e.g., 0.1; aka. *shrinkage*.
+- Stochastic gradient boosting: sub-sample the dataset for the base learners.
+- Set `max_features` to narrow the choice in each split.
+
+![Tuning Gradient Boosting](./pics/tuning_gradient_boosting.png)
+
+#### AdaBoost and GradientBoosting Syntax
+
+```python
+
+### -- Gradient Boosting
+
+# Imports: Classification or Regression
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+
+# Instantiate with hyper-parameters
+# max_features=3: we choose among 3 features in each split
+GBC = GradientBoostingClassifier(learning_rate=0.1,
+                                 max_features=1,
+                                 subsample=0.5,
+                                 n_estimators=200)
+
+# Fit and predict
+GBC = GBC.fit(X_train, y_train)
+y_pred = GBC.predict(X_test)
+
+### -- AdaBoost
+
+# Imports
+# Classification or Regression
+# Note that the base learner can be set manually for AdaBoost
+from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor
+from sklearn.tree import DecisionTreeClassifier
+
+# Since we pass the base learner manually,
+# we can set its max depth when we pass it
+ABC = AdaBoostClassifier(base_estimator=DecisionTreeClassifier(),
+                         learning_rate=0.1,
+                         n_estimators=200)
+
+# Fit and predict
+ABC = ABC.fit(X_train, y_train)
+y_pred = ABC.predict(X_test)
+
+```
+
+#### XGBoost
+
+XGBoost = Extreme Gradient Boosting.
+
+XGBoost is basically gradient boosting, but it's implemented in a parallelized way and it has its own library, i.e., it's not in `sklearn`.
+
+Note that `GradientBoostingClassifier` is not parallelized, so it can take quite a long time to train.
+
+Therefore, we are encouraged to use XGBoost, which has a similar interface as `sklearn`, same results and it's faster.
+
+```bash
+conda install -c conda-forge py-xgboost
+```
+
+### 5.7 Stacking
+
+Stacking consist in using several base learners that learn some meta-features; then, those meta features are used on a meta-learner to output the final prediction.
+
+The meta-learner can be a voting mechanism or something more complex, like a classifier based on the meta-features. Take into account that this meta-learner needs a test set, too.
+
+Additionally, the base learners can be any types of models, not only trees.
+
+Note that those models can become quite complex very quickly; usually, the more complex a model is, the higher the risk of overfitting. Thus, we need to check that we don't fall in that trap, and that our model generalizes well.
+
+![Stacking](./pics/stacking.png)
+
+```python
+# Imports: Classification or Regression
+from sklearn.ensemble import VotingClassifier, VotingRegressor
+from sklearn.ensemble import StackingClassifier, StackingRegressor
+
+# Instantiate
+# - estimators: list of models to fit
+# - voting: 'hard' if we want majority class, 'soft' if probabilities are averaged
+VC = VotingClassifier(estimators=estimator_list, voting='soft')
+# StackingClasssifier is like the VotingClasssifier
+# but we pass the final estimator instead of voting
+SC = StackingClassifier(estimators=estimator_list,
+                        final_estimator=LogisticRegression())
+
+# Fit and predict
+VC = VC.fit(X_train, y_train)
+y_pred = VC.predict(X_test)
+SC = SC.fit(X_train, y_train)
+y_pred = SC.predict(X_test)
+
+```
+
+
+
 
 
