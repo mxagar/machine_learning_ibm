@@ -1306,7 +1306,7 @@ We split the tree adding nodes until we reach a condition. That condition can be
 - Until a `max_depth` is achieved; then, we take the class of the majority in each leave.
 - Until a performance metric achieved, e.g., classification has a certain accuracy.
 
-Splits are done so that information gain is maximized. Information gain is related to the error. A greedy approach is taken with which many possible questions are tried in each new node and the best question is selected; that optimum quality is given by the information gain or minimized error.
+Splits are done so that information gain is maximized. Information gain is related to the error. A **greedy approach** is taken with which many possible questions are tried in each new node and the best question is selected; that optimum quality is given by the information gain or minimized error.
 
 In other words: information gain happens when the children nodes reduce the error associated to their parent. If a new split does not decrease that error, it's not a valid split and we don't continue. In order to compute the error of the children, we calculate the weighted sum of their errors; if that's larger or equal to the error of the parent node, there is no information gain.
 
@@ -1655,6 +1655,91 @@ Nothing really new is shown.
 
 The notebook: `./lab/lab_jupyter_decisiontree.ipynb`
 
-## 5. Ensemble-Based Methods and Bagging
+## 5. Ensemble Models
 
+The idea behind ensemble-based methods is to generate several models and to combine them.
 
+### 5.1 Ensemble-Based Methods and Bagging
+
+Bagging methods consist of several trees which are combined to overcome issues related to overfitting.
+
+The term **bagging** refers to **bootstrap aggregating**: we have several models and each one predicts a class; the final class is the class that the majority decides. In particular, trees are used in bagging.
+
+The bigger the number of trees, the smaller is the error until a point of diminishing return: often times the RMSE doesn't decrease more with more than about 50 trees.
+
+![How Many Trees?](./pics/bagging_amount_trees.png)
+
+Bagging trees have all the pros of the decision trees, and additionally:
+
+- They reduce variability.
+- Trees are independent from each other, so they can grow in parallel.
+
+Python Syntax:
+
+```python
+# Imports: We can perform classification or regression
+from sklearn.ensemble import BaggingClassifier, BaggingRegressor
+
+# Instantiate. Specify the number of trees/estimators.
+BC = BaggingClassifier(n_estimators=50)
+
+# Fit and predict
+BC = BC.fit(X_train, y_train)
+y_pred = BC.predict(X_test)
+
+```
+
+### 5.2 Random Forests
+
+For `n` independent trees with a variance `s^2`, the bagged variance is `s^2/n`.
+
+However, we perform bootstrapping: large numbers of smaller samples of the same size are repeatedly drawn, **with replacement**, from a single original sample.
+
+Sampling with replacement occurs when we draw an item from a population and we return it. Thus, different samples share the data-points.
+
+Therefore, since we are sampling with replacement, the trees are likely to be correlated, i.e., they are not independent. Thus, the total variance is:
+
+`r*s^2 + (1-r)*s^2/n`
+
+where `r` is the correlation. The larger the correlation, the larger the total variance.
+
+How can we decrease the correlation? By introducing randomness, which de-correlates the trees. That is achieved by using random subsets of features for each tree:
+
+  - Classification: `sqrt(m)`
+  - Regression: `m/3`
+
+In summary, **random forests** is bagging, but with a random subset of features allowed to each tree.
+
+Usually we need more trees than with bagging to plateau the decrease of the RMSE.
+
+![How Many Random Forest Trees?](./pics/random_forests_amount_of_trees.png)
+
+Python Syntax:
+
+```python
+# Imports: we can perform Classification and Regression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+# Instantiate
+RF = RandomForestClassifier(n_estimators=50)
+
+# Fit and train
+RC = RC.fit(X_train, y_train)
+y_pred = RC.predict(X_test)
+
+```
+
+What if we want more randomness? Instead of choosing node feature splits greedily, we can choose them randomly. That approach is called **extra random trees**. Even though the single trees are weaker, the overall vote is good. Python syntax:
+
+```python
+# Imports: we can perform Classification and Regression
+from sklearn.ensemble import ExtraTreesClassifier, ExtraTreesRegressor
+
+# Instantiate
+ET = ExtraTreesClassifier(n_estimators=50)
+
+# Fit and train
+ET = ET.fit(X_train, y_train)
+y_pred = ET.predict(X_test)
+
+```
