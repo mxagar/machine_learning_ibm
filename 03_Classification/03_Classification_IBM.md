@@ -1886,4 +1886,14 @@ feature_imp.plot(kind='bar', figsize=(16, 6))
 
 ### 5.5 Python Demo: Bagging
 
+The demo notebook on bagging `lab/Bagging.ipynb` does not introduce new concepts or coding examples.
+
+Basically, several trees and bagging models are computed with varied parameters; then, their accuracy is plotted against the varied parameters.
+
+Several datasets are used also:
+
+- `data/ChurnData.csv`
+- `data/cell_samples.csv`
+- `data/drug200.csv`
+
 
