@@ -1917,14 +1917,14 @@ Boosting, on the other hand, have the following differences against bagging:
 
 Boosting uses different loss functions, the most popular are:
 
-- AdaBoost or adaptive boosting
+- AdaBoost or adaptive boosting (the first one which was introduced)
 - Gradient boosting
 
 The loss function is computed as follows:
 
 - A decision stump is done: a threshold is chosen for a feature; points on one side belong to a class, the rest to the other class.
 - For each point a **margin** is computed; we can understand that margin has the magnitude of the distance to the threshold and
-  - it is positive if thepoint is correctly classified
+  - it is positive if the point is correctly classified
   - negative otherwise.
 - That margin is the variable with which we compute the loss function.
 
@@ -2024,6 +2024,8 @@ Additionally, the base learners can be any types of models, not only trees.
 
 Note that those models can become quite complex very quickly; usually, the more complex a model is, the higher the risk of overfitting. Thus, we need to check that we don't fall in that trap, and that our model generalizes well.
 
+Before creating a Voting/Stacking model we should try the independent models first and check their optimum efficiency (e.g., with grid search hyper parameter tuning). If the single models perform quite well, maybe it's better to continue with them. The ensemble stacking model must bring a significant improvement over the single models!
+
 ![Stacking](./pics/stacking.png)
 
 ```python
@@ -2034,6 +2036,11 @@ from sklearn.ensemble import StackingClassifier, StackingRegressor
 # Instantiate
 # - estimators: list of models to fit
 # - voting: 'hard' if we want majority class, 'soft' if probabilities are averaged
+estimator_list = [('LR_L2', LogisticRegression(penalty='l2',
+                                               max_iter=500,
+                                               solver='saga')),
+                  ('GBC', GradientBoostingClassifier(random_state=42,
+                                                     warm_start=True))]
 VC = VotingClassifier(estimators=estimator_list, voting='soft')
 # StackingClasssifier is like the VotingClasssifier
 # but we pass the final estimator instead of voting
@@ -2048,7 +2055,243 @@ y_pred = SC.predict(X_test)
 
 ```
 
+### 5.8 Python Lab: Human Activity Classification with Boosting
+
+The notebook
+
+`03f_LAB_Boosting_and_Stacking.ipynb`
+
+uses the
+
+`Human_Activity_Recognition_Using_Smartphones_Data.csv`
+
+dataset, which was introduced in [Section 1.9](#1.9-Python-Lab:-Human-Activity). In it, we have 561-feature vectors with values already scaled to `[-1,1]` and activity target values related to
+
+- `WALKING`,
+- `WALKING UPSTAIRS`,
+- `WALKING DOWNSTAIRS`,
+- `SITTING`, 
+- `STANDING`,
+- and `LAYING`.
+
+No cleaning needs to be carried out and all variables are continuous; the only pre-processing consists in converting the class names into integers.
+
+Several models are tried in the notebook:
+
+1. Gradient Boost Classifier for Different Numbers or Trees 
+2. Grid Search: Gradient Boost
+3. Grid Search: AdaBoost, Adaptive Boost
+4. Voting / Stacking
 
 
+```python
 
+### -- 1. Gradient Boost Classifier for Different Numbers or Trees
+
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import accuracy_score
+
+error_list = list()
+
+# Iterate through various possibilities for number of trees
+# This loop takes around 20 minutes on my Mac M1
+tree_list = [15, 25, 50, 100, 200, 400]
+for n_trees in tree_list:
+    
+    # Initialize the gradient boost classifier
+    # There is no out-of-bag error in boosted models,
+    # because we use the complete dataset
+    # The option warm_flag=True has apparently a bug;
+    # with it we'd reuse the solution of the previous call
+    # to fit and add more estimators to the ensemble
+    GBC = GradientBoostingClassifier(n_estimators=n_trees, random_state=42)
+
+    # Fit the model
+    print(f'Fitting model with {n_trees} trees')
+    GBC.fit(X_train.values, y_train.values)
+    y_pred = GBC.predict(X_test)
+
+    # Get the error
+    error = 1.0 - accuracy_score(y_test, y_pred)
+    
+    # Store it
+    error_list.append(pd.Series({'n_trees': n_trees, 'error': error}))
+
+error_df = pd.concat(error_list, axis=1).T.set_index('n_trees')
+
+# Create the plot
+ax = error_df.plot(marker='o', figsize=(12, 8), linewidth=5)
+# Set parameters
+ax.set(xlabel='Number of Trees', ylabel='Error')
+ax.set_xlim(0, max(error_df.index)*1.1);
+
+### -- 2. Grid Search: Gradient Boost
+
+from sklearn.model_selection import GridSearchCV
+
+# The parameters to be fit
+param_grid = {'n_estimators': [400], #tree_list,
+              'learning_rate': [0.1, 0.01, 0.001, 0.0001],
+              'subsample': [1.0, 0.5],
+              'max_features': [1, 2, 3, 4]}
+
+# The grid search object
+GV_GBC = GridSearchCV(GradientBoostingClassifier(random_state=42,
+                                                 warm_start=True), 
+                      param_grid=param_grid, 
+                      scoring='accuracy',
+                      n_jobs=-1)
+
+# Do the grid search
+GV_GBC = GV_GBC.fit(X_train, y_train)
+
+# The best model
+GV_GBC.best_estimator_
+
+# We can save the model with pickle
+# We serialize the python object
+import pickle
+pickle.dump(GV_GBC, open('GV_GBC.pickle','wb')) # wb: write bytes
+# To load pickle
+GV_GBC = pickle.load(open('GV_GBC.pickle','rb')) # rb: read bytes
+
+# Evaluate
+from sklearn.metrics import classification_report, confusion_matrix
+
+y_pred = GV_GBC.predict(X_test)
+print(classification_report(y_pred, y_test))
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot=True, fmt='d')
+
+### -- 3. Grid Search: AdaBoost, Adaptive Boost
+
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+ABC = AdaBoostClassifier(DecisionTreeClassifier(max_depth=1))
+
+param_grid = {'n_estimators': [100, 150, 200],
+              'learning_rate': [0.01, 0.001]}
+
+GV_ABC = GridSearchCV(ABC,
+                      param_grid=param_grid, 
+                      scoring='accuracy',
+                      n_jobs=-1)
+
+GV_ABC = GV_ABC.fit(X_train, y_train)
+
+# The best model
+GV_ABC.best_estimator_
+
+y_pred = GV_ABC.predict(X_test)
+print(classification_report(y_pred, y_test))
+cm = confusion_matrix(y_test, y_pred)
+ax = sns.heatmap(cm, annot=True, fmt='d')
+
+### -- 4. Voting / Stacking
+
+# Before creating a Voting/Stacking model
+# we should try the independent models first and check their
+# optimum efficiency (e.g., with grid search hyper parameter tuning).
+# If the single models perform quite well, maybe it's better
+# to continue with them.
+# The ensemble stacking model must bring a significant improvement
+# over the single models!
+
+from sklearn.linear_model import LogisticRegression
+
+# L2 regularized logistic regression
+LR_L2 = LogisticRegression(penalty='l2', max_iter=500, solver='saga').fit(X_train, y_train)
+
+y_pred = LR_L2.predict(X_test)
+print(classification_report(y_pred, y_test))
+
+sns.set_context('talk')
+cm = confusion_matrix(y_test, y_pred)
+ax = sns.heatmap(cm, annot=True, fmt='d')
+
+from sklearn.ensemble import VotingClassifier
+
+# The combined model -- logistic regression and gradient boosted trees
+estimators = [('LR_L2', LR_L2), ('GBC', GV_GBC)]
+
+# Though it wasn't done here, it is often desirable to train 
+# this model using an additional hold-out data set and/or with cross validation
+VC = VotingClassifier(estimators, voting='soft')
+VC = VC.fit(X_train, y_train)
+
+y_pred = VC.predict(X_test)
+print(classification_report(y_test, y_pred))
+
+sns.set_context('talk')
+cm = confusion_matrix(y_test, y_pred)
+ax = sns.heatmap(cm, annot=True, fmt='d')
+
+```
+
+### 5.9 Python Demos: AdaBoost and Stacking
+
+The following notebooks are provided:
+
+- `lab/Ada_Boost.ipynb`
+- `lab/Stacking_for_Classification_with_Python.ipynb`
+
+In them, several datasets are re-used. The focus lies on checking fitting models with different hyperparameters, either through grid search or simply using loops and registering the difference in accuracy due to overfitting.
+
+Nothing really new is shown.
+
+However, the most relevant code snippets are shown here:
+
+```python
+
+### Grid Search for Stacking Classifiers
+
+estimators = [('SVM',SVC(random_state=42)),
+              ('knn',KNeighborsClassifier()),
+              ('dt',DecisionTreeClassifier())]
+
+clf = StackingClassifier( estimators=estimators, final_estimator= LogisticRegression())
+# StackingClassifier(estimators=[('SVM', SVC(random_state=42)),
+#                                ('knn', KNeighborsClassifier()),
+#                                ('dt', DecisionTreeClassifier())],
+#                    final_estimator=LogisticRegression())
+
+# Recall to use double _ for models within model
+param_grid = {'dt__max_depth': [n for n in range(10)],
+              'dt__random_state':[0],
+              'SVM__C':[0.01,0.1,1],
+              'SVM__kernel':['linear', 'poly', 'rbf'],
+              'knn__n_neighbors':[1,4,8,9]}
+
+search = GridSearchCV(estimator=clf, param_grid=param_grid,scoring='accuracy')
+search.fit(X_train, y_train)
+
+search.best_score_ # 1, be aware of the overfitting!
+
+search.best_params_
+
+print({"Test Accuracy":metrics.accuracy_score(y_test, model.predict(X_test)),
+       "Train Accuracy": metrics.accuracy_score(y_train, model.predict(X_train))})
+#{'Test Accuracy': 0.9666666666666667, 'Train Accuracy': 1.0}
+
+```
+
+### 5.10 Ensemble Methods: Summary
+
+- Ensemble models beat usually any other method with tabular data.
+- Most common ensemble methods:
+  - Bagging = bootstrapped aggregating: several trees are fitted using samples with replacement
+    - `BaggingClassifier`: overfitting can occur because trees are correlated (due to sampling with replacement)
+    - `RandomForestClassifier`: max number of features selected randomly, which decreases correlation; thus, no overfitting.
+  - Boosting: complete dataset used in successive weak or simple base learners which improve by penalizing residuals (miss-classified points). Since we're improving the models, we risk overfitting, thus we need to do grid search.
+    - `AdaBoostClassifier`: we can select our weak learner model; the loss is exponential.
+    - `GradientBoostingClassifier`: weak learners are trees; the loss is not as steep and it performs better with outliers.
+  - Voting / Stacking: we combine several models and the final classification is a hard or soft average (i.e., majority of classes or average probability). Use them only if they are significantly better than the single models, because they introduce complexity, i.e., they are more difficult to handle and they overfit. So, if we use them, apply grid search!
+    - `VotingClassifier`: voting is done.
+    - `StackingClassifier`: a classifier is appended to give the final result.
+- `AdaBoostClassifier` can take different base learners, not only trees.
+- `RandomForestClassifier` forests do not overfit with more learners/trees, the performance plateaus; they are fast, because the trees are independently trained.
+- `GradientBoostingClassifier` is better than `AdaBoostClassifier`, but it takes longer to train it; try the `xgboost` library instead of `sklearn`.
+- Boosting overfits, thus, perform always a grid search! 
+- **Advice: stick to `RandomForestClassifier` or `GradientBoostingClassifier`with grid search; also, try `xgboost`.**
 
