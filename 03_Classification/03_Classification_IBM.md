@@ -2280,10 +2280,10 @@ print({"Test Accuracy":metrics.accuracy_score(y_test, model.predict(X_test)),
 
 - Ensemble models beat usually any other method with tabular data.
 - Most common ensemble methods:
-  - Bagging = bootstrapped aggregating: several trees are fitted using samples with replacement
-    - `BaggingClassifier`: overfitting can occur because trees are correlated (due to sampling with replacement)
+  - Bagging = bootstrapped aggregating: several independent trees are fitted using samples with replacement; since independent, parallelized.
+    - `BaggingClassifier`: overfitting can occur because trees are correlated (due to sampling with replacement).
     - `RandomForestClassifier`: max number of features selected randomly, which decreases correlation; thus, no overfitting.
-  - Boosting: complete dataset used in successive weak or simple base learners which improve by penalizing residuals (miss-classified points). Since we're improving the models, we risk overfitting, thus we need to do grid search.
+  - Boosting: complete dataset used in successive weak or simple base learners which improve by penalizing residuals (miss-classified points). Since we're improving the previous models, we risk overfitting, thus we need to do grid search.
     - `AdaBoostClassifier`: we can select our weak learner model; the loss is exponential.
     - `GradientBoostingClassifier`: weak learners are trees; the loss is not as steep and it performs better with outliers.
   - Voting / Stacking: we combine several models and the final classification is a hard or soft average (i.e., majority of classes or average probability). Use them only if they are significantly better than the single models, because they introduce complexity, i.e., they are more difficult to handle and they overfit. So, if we use them, apply grid search!
@@ -2294,4 +2294,54 @@ print({"Test Accuracy":metrics.accuracy_score(y_test, model.predict(X_test)),
 - `GradientBoostingClassifier` is better than `AdaBoostClassifier`, but it takes longer to train it; try the `xgboost` library instead of `sklearn`.
 - Boosting overfits, thus, perform always a grid search! 
 - **Advice: stick to `RandomForestClassifier` or `GradientBoostingClassifier`with grid search; also, try `xgboost`.**
+
+## 6. Model Interpretability
+
+Black-box machine learning models are difficult to be trusted. Models that can be interpreted are much more valuable, because:
+
+- We can explain how the model takes its decisions; that is essential in high-risk or sensitive areas or applications, such as medicine or finance.
+- We can understand those decision, thus, trust the model.
+- We can more easily debug model drifts or errors.
+
+We can classify models as:
+
+- Self-interpretable: more simple models; preferred in high-risk or high sensitivity applications.
+- Non-self-interpretable (black-box): more complex structures; they achieve state-of-the-art performances in cutting edge applications, e.g., natural language translation, image recognition, etc.
+
+### 6.1 Examples of Self-Interpretable and Non-Self-Interpretable Models
+
+Self-interpretable models (often used in finance and industry):
+
+- Linear models: linear regression, logistic regression; however, even a linear model becomes difficult to interpret if we have many features. Thus, use feature selection, which also reduces the risk of overfitting.
+- Tree models: easy to interpret because they mimic human if-else case segregation step by step.
+- K Nearest Neighbors: since data-points are vectors, we can narrow down to close vectors to estimate target values; additionally, we detect similar points in the dataset, which might lead to interesting insights. However, we use the entire dataset to infer a value, which is expensive; solution: sample data-points.
+
+Non-self-interpretable models:
+
+- Non-linear support vector machines.
+- Neural networks.
+- Ensemble models, e.g., random forests: we have many models, each one predicting something; then, a voting is done. It is difficult in such a scenario to interpret what's going on.
+
+Model intepretation techniques can be:
+
+- Intrinsic: used for models with high interpretability; they basically simplify models (e.g., with regularization) to increase interpretability.
+- Post-hoc: used for models with low interpretability.
+
+### 6.2 Model Agnostic Explanations
+
+Model agnostic explanation methods are able to provide interpretations even when models are not that interpretable. The most important methods are:
+
+- Permutation feature importance (the most common)
+- Impurity-based feature importance
+- Shapley Additive explanation, SHAP values
+
+The **Permutation feature importance** method is the most common model agnostic explanation method; it consists in taking each feature one by one and shuffling its column values. When we shuffle a column, we make the predictions again and check how the error has changed. More important features will lead to larger error increments. Thus, the feature importance is computed by calculating the error difference before and after the permutation.
+
+It is possible to display the errors associated to each feature 
+
+- as bar charts
+- or as distributions by taking the error introduced by each data-point. 
+
+Then, we rank them.
+
 
