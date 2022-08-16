@@ -2612,6 +2612,5 @@ exp.as_pyplot_figure();
 # - His/her experience is more than 15 years
 # - His/her company is not NGO or Startup
 
-
 ```
 
