@@ -2344,4 +2344,274 @@ It is possible to display the errors associated to each feature
 
 Then, we rank them.
 
+However, the permutation feature importance doesn't give us information on the magnitude and direction of change for the target when a variable is changed. To that end, **Partial Dependency Plots (PDP)** can be used: we take one feature and vary the values of the complete column from the minimum value to the maximum; by each imposed value we take the average target outcome (over all rows) and plot it. Note that all rows get the same value, which is increased successively.
+
+![Partial Dependency Plot](./pics/partial_dependency_plot.png)
+
+### 6.3 Surrogate Models
+
+Surrogate models are linear or highly interpretable models which are built to simulate models with low interpretability. Then, if they are close enough, we interprest the surrogate models.
+
+Two types of surrogate models are possible:
+
+- Global: a new linear/tree model is built with the entire dataset and the predictions of the black box model.
+- Local: one/few instance/s or row/s of the dataset is/are taken (a row we'd like to analyze); then, it is slightly altered sampling from the distributions of the features, so we obtaina new dataset. Then, we train a model with the new dataset.
+
+**Global surrogate models** are straightforward to build and help explain how the model works. We basically take `X_train` and `y_pred_1 = model_1(X_train)` and build a new linear/tree model, which yields `y_pred_2 = model_2(X_train)`. Then, the difference `y_pred_1 - y_pred_2` is evaluated with an appropriate metric: MSE, cross-entropy loss, etc. If the difference is small, the surrogate model is assumed to be good enough to interpret what's going on in the black box.
+
+![Global Surrogate Models](./pics/global_surrogate_models.png)
+
+**Local surrogate models** are more complex to build and explain why one row or data-point yields an output; i.e., they don't explain how the model works, but why one instance leads to an outcome. They are called **Local Interpretable Model-Agnostic Explanations (LIME)** and follow these steps:
+
+- One row (or few rows) we want to analyze is selected.
+- Feature permutations are applied: we build the distribution of each feature column and randomly sample from them, generating a synthetic dataset: `X_synthetic`.
+- The synthetic dataset it fed to the black box model, which yields: `y_pred_1 = model_1(X_synthetic)`.
+- Weighting factors for the rows in `X_synthetic` are computed based on the similarity/distance from each row to the selected data-point we want to analyze.
+- We train the local surrogate model with the weighted `X_synthetic` and the black box prediction `y_pred_1`.
+
+Then, we have the local surrogate model which we can use to analyze why the selected instance yields its outcome.
+
+![Local Surrogate Models: LIME](./pics/local_surrogate_model_lime.png)
+
+Example: we want to predict whether employees will quit; we pick one and the model says he/she has a high chance of going away. Why? The local surrogate models provide with a graph that highlights the most important values which contribute to that outcome.
+
+The following slide depicts the example, which can be read as a story.
+
+![LIME Example](./pics/lime_example.png)
+
+### 6.4 Python Lab: Model Interpretability
+
+The notebook
+
+`lab_jupyter_model-explanations.ipynb`
+
+is very interesting, since it shows how to apply the techniques explained in the current section.
+
+For the last part, we need to install [LIME](https://github.com/marcotcr/lime); barely the surface of this package is touched. We can actually use LIME with images! Have a look at the repository page.
+
+```bash
+pip install lime==0.2.0.1
+```
+
+The dataset `lab/data/hr_new_job_processed.csv` is used, which records 11 features of 11504 individuals and a target value of whether they ended up changing jobs or not. Thus, the goal is to predict whether a worker will change his/her job.
+
+Summary of steps:
+
+1. Load and Split Dataset
+2. Create Black Box Model: Random Forests
+3. Permutation Feature Importance: Feature importances obtained by shuffling the values in each column and comparing the  prediction error
+4. Partial Dependency Plot (PDP): Effect of increasing one variable on the target; a kind of a linear model coefficient
+5. Global Surrogate Model: A linear or explainable model is fitted and its coefficients are used to explain the black box model
+
+```python
+
+import pandas as pd
+import numpy as np 
+import matplotlib.pyplot as plt
+import lime.lime_tabular
+
+from sklearn import metrics
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier, export_text, export_graphviz, plot_tree
+from sklearn.inspection import permutation_importance, plot_partial_dependence
+
+### -- 1. Load and Split Dataset
+
+job_df.to_csv('data/hr_new_job_processed.csv',sep=',', header=True, index=False)
+job_df = pd.read_csv('data/hr_new_job_processed.csv')
+
+X = job_df.loc[:, job_df.columns != 'target']
+y = job_df[['target']]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state = 12)
+
+### -- 2. Create Black Box Model: Random Forests
+
+# Define a black-box random forest model
+black_box_model = RandomForestClassifier(random_state = 123, max_depth=25, 
+                             max_features=10, n_estimators=100, 
+                             bootstrap=True)
+# Train the model
+black_box_model.fit(X_train, y_train.values.ravel())
+
+# Predicting test set
+y_blackbox = black_box_model.predict(X_test)
+
+# Score
+metrics.roc_auc_score(y_test, y_blackbox) # 0.81
+
+### -- 3. Permutation Feature Importance: Feature importances obtained by shuffling the values in each column and comparing the  prediction error
+
+# Use permutation_importance to calculate permutation feature importances.
+# Note we have these parameters, too:
+# - n_repeats: how many times each feature is permuted
+# - sample_weight: weight assigned to each sample/data-point
+# The output is of the size: n_features x n_repeats
+feature_importances = permutation_importance(estimator=black_box_model,
+                                             X = X_train,
+                                             y = y_train,
+                                             n_repeats=5,
+                                             random_state=123,
+                                             n_jobs=2)
+feature_importances.importances # (11, 5) array
+
+def visualize_feature_importance(importance_array):
+    # Sort the array based on mean value
+    sorted_idx = importance_array.importances_mean.argsort()
+    # Visualize the feature importances using boxplot
+    fig, ax = plt.subplots()
+    fig.set_figwidth(16)
+    fig.set_figheight(10)
+    fig.tight_layout()
+    ax.boxplot(importance_array.importances[sorted_idx].T,
+               vert=False, labels=X_train.columns[sorted_idx])
+    ax.set_title("Permutation Importances (train set)")
+    plt.show()
+
+# A ranked box plot is shown, with a box for each feature
+# Note that we used n_repeats=5;
+# we can increase that number to have more realistic box plots
+visualize_feature_importance(feature_importances)
+
+### -- 4. Partial Dependency Plot (PDP): Effect of increasing one variable on the target; a kind of a linear model coefficient
+
+# Important features: we select them manually, bacause it is expensive to compute PDP.
+# We can compute the feature importances by permutation and select the most important ones.
+important_features = ['city_development_index', 'experience']
+# Arguments: 
+# - estimator: the black box model
+# - X is the training data X
+# - features are the important features we are interested
+plot_partial_dependence(estimator=black_box_model, 
+                        X=X_train, 
+                        features=important_features,
+                        random_state=123)
+# One plot for each of the selected features is shown:
+# The value of the average y displayed as all rows of the selected columns
+# are increased from their minimum to their maximum value
+# Note: deprecation warning appears; we should rather use:
+# from sklearn.inspection import partial_dependence, PartialDependenceDisplay
+
+### -- 5. Global Surrogate Model: A linear or explainable model is fitted and its coefficients are used to explain the black box model
+
+# Normalize/scale X_test
+min_max_scaler = StandardScaler()
+X_test_minmax = min_max_scaler.fit_transform(X_test)
+
+# Create linear model
+lm_surrogate = LogisticRegression(max_iter=1000, 
+                                  random_state=123, penalty='l1', solver='liblinear')
+lm_surrogate.fit(X_test_minmax, y_blackbox)
+
+# Accuracy of linear model
+y_surrogate = lm_surrogate.predict(X_test_minmax)
+metrics.accuracy_score(y_blackbox, y_surrogate) # 0.74
+# Since the accuracy is not so bad, we use the logistic regression model
+# as a surrogate model
+
+# Extract and sort feature coefficients
+def get_feature_coefs(regression_model):
+    coef_dict = {}
+    # Filter coefficients less than 0.01
+    for coef, feat in zip(regression_model.coef_[0, :], X_test.columns):
+        if abs(coef) >= 0.01:
+            coef_dict[feat] = coef
+    # Sort coefficients
+    coef_dict = {k: v for k, v in sorted(coef_dict.items(), key=lambda item: item[1])}
+    return coef_dict
+
+coef_dict = get_feature_coefs(lm_surrogate)
+coef_dict
+# {'city_development_index': -1.1037003758316446,
+#  'experience': -0.31534600537812624,
+#  'company_size': -0.31026674911903024,
+#  'company_type_Funded Startup': -0.2016408367029962,
+#  'training_hours': -0.15908670450511542,
+#  'company_type_Early Stage Startup': -0.13134779175452327,
+#  'company_type_NGO': -0.052803892359036785,
+#  'company_type_Other': 0.07697385537422011,
+#  'education_level': 0.15260503732062142,
+#  'company_type_Pvt Ltd': 0.4424638344649266}
+
+# Generate bar colors based on if value is negative or positive
+def get_bar_colors(values):
+    color_vals = []
+    for val in values:
+        if val <= 0:
+            color_vals.append('r')
+        else:
+            color_vals.append('g')
+    return color_vals
+
+# Visualize coefficients
+def visualize_coefs(coef_dict):
+    features = list(coef_dict.keys())
+    values = list(coef_dict.values())
+    y_pos = np.arange(len(features))
+    color_vals = get_bar_colors(values)
+    plt.rcdefaults()
+    fig, ax = plt.subplots()
+    ax.barh(y_pos, values, align='center', color=color_vals)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(features)
+    # labels read top-to-bottom
+    ax.invert_yaxis()  
+    ax.set_xlabel('Feature Coefficients')
+    ax.set_title('')
+    plt.show()
+
+# Bar chart: the coefficients of the logistic regression are plotted
+visualize_coefs(coef_dict)
+
+### -- 6. Local interpretable model-agnostic explanations (LIME): 
+
+explainer = lime.lime_tabular.LimeTabularExplainer(
+    # Set the training dataset to be X_test.values (2-D Numpy array)
+    training_data=X_test.values,
+    # Set the mode to be classification
+    mode='classification',
+    # Set class names to be `Not Changing` and `Changing`
+    class_names = ['Not Changing', 'Changing'],
+    # Set feature names
+    feature_names=list(X_train.columns),
+    random_state=123,
+    verbose=True)
+
+instance_index = 19
+selected_instance = X_test.iloc[[instance_index]]
+lime_test_instance = selected_instance.values.reshape(-1)
+selected_instance
+# His/her city is well-developed with a city development index > 0.9
+# His/her training hour is 74 hours
+# His/her company is a very big company, 7 means more than 10,000 employees
+# His/her experience is more than 16 years
+# His/her company is a Pvt Ltd (Private) company
+# His/her has Master's degree(s)
+# Black box target output (probability of changing jobs): 0.03
+
+exp = explainer.explain_instance(
+                                 # Instance to explain
+                                 lime_test_instance, 
+                                 # The prediction from black-box model
+                                 black_box_model.predict_proba,
+                                 # Use max 10 features
+                                 num_features=10)
+
+# A similar plot as the one of the linear model coefficients
+# but this time the values are associated with the selected data-point only
+# and they say why the predicted probability is 0.03
+exp.as_pyplot_figure();
+
+# Interpretation:
+# - His/her company is a very big company
+# - His/her city is well-developed with city development
+# - His/her highest degree is Master or above
+# - His/her experience is more than 15 years
+# - His/her company is not NGO or Startup
+
+
+```
 
