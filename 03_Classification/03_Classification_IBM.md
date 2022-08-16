@@ -2614,3 +2614,41 @@ exp.as_pyplot_figure();
 
 ```
 
+## 7. Dealing with Unbalanced Datasets
+
+A dataset is unbalanced when its classes have significantly different shares. That can lead to incorrect models that are not able to learn but seem to be working well; example: imagine we have a dataset in which one class has 99% of the instances.
+
+### 7.1 Down- and Upsampling
+
+If the unbalanced nature of the dataset is important, typical ways of dealing with it are:
+
+- Downsampling: we remove from the class with too many instances until the numbers/counts are equaled.
+- Upsampling: we copy instances of the minority class until the numbers/counts are equaled.
+- Resampling: we do a mix of downsampling and resampling.
+
+In any case, we need to follow this steps:
+
+- First perform a stratified train-test split
+- Then up- or downsample the train split
+- Finally, build models
+
+We need to take into account the following pros and cons:
+
+**Downsampling**:
+
+- Adds tremendous importance to the minority class.
+- It shoots recall and brings down precision; e.g., 0.8 recall and 0.15 precision.
+
+**Upsampling**: 
+
+- Mitigates excessive weight on the minor class.
+- Recall is still typically larger than precision, but the gap is lesser; e.g., 0.7 recall and 0.4 precision.
+- Downside: we are overfitting to the repated rows.
+
+So, what should we do? We can decide it with an experimental approach: we perform several up-/downsamplings and compute the ROC-AUC for each model and dataset using the test split. Then, we pick the best and select the threshold value that yields the best precision-recall pair, depending on the business objectives.
+
+![Unbalanced datasets: Cross-validation](./pics/unbalanced_datasets_cross_validation.png)
+
+### 7.2 Weighting and Stratified Sampling
+
+
