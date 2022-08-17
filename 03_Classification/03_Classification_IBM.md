@@ -182,8 +182,8 @@ From the matrix, we compute the most common error metrics:
 
 Interpretation:
 
-- Precision: do we wan to assure that our predicted positives are correct?
-- Recall: do we want to capture all the true positives?
+- Precision: do we wan to assure that our predicted positives are correct? **How good are we at minimizing Type I error?**
+- Recall: do we want to capture all the true positives? **How good are we at minimizing Type II error?**
 - F1: a balance
 
 ![Error Measurements with the Confusion Matrix](./pics/error_measurements.png)
@@ -2645,10 +2645,145 @@ We need to take into account the following pros and cons:
 - Recall is still typically larger than precision, but the gap is lesser; e.g., 0.7 recall and 0.4 precision.
 - Downside: we are overfitting to the repated rows.
 
-So, what should we do? We can decide it with an experimental approach: we perform several up-/downsamplings and compute the ROC-AUC for each model and dataset using the test split. Then, we pick the best and select the threshold value that yields the best precision-recall pair, depending on the business objectives.
+So, what should we do? We can decide it with an experimental approach: we perform several up-/downsamplings and compute the ROC-AUC for each model and dataset using the test split. Then, we pick the best and select the threshold value that yields the best precision-recall pair, depending on the business objectives. We can also compute the precision and recall metrics and decide based on them.
 
 ![Unbalanced datasets: Cross-validation](./pics/unbalanced_datasets_cross_validation.png)
 
+Note that there is a [Imbalanced-Learn](https://imbalanced-learn.org/stable/index.html) library which is an add-on to `sklearn`. **Most of the techniques described below come from the documentation of that package.**
+
 ### 7.2 Weighting and Stratified Sampling
 
+Down- and upsampling not always works, due to several reasons:
+
+- If we downsample, we are loosing valuable data-points.
+- If we upsample, say with SMOTE, we might be decreasing our Precision very much.
+
+In those cases, instead of down-/upsampling, we can weight our data; most estimators can take  weight vectors in the `fit()` method or in the estimator instantiation. We usually weight data-points inversely to their frequency in the dataset.
+
+The weights can be applied in the loss computation: the weight value is multiplied to each single error, penalizing more the data-points with higher weights, i.e., the ones with 
+
+Also, it is important to split the dataset maintaining the class ratios:
+
+- We can use the `stratify=y` parameter in `train_test_split()`.
+- `StratifiedShuffleSplit()`.
+- `StratifiedKFold`, `RepeatedStratifiedKFold`.
+
+### 7.3 Random and Synthetic Oversampling
+
+Random oversampling works as follows:
+
+- Resample with replacement (i.e., data-points can be chosen again) from minority class.
+- No concerns about geometry of feature space.
+- Good for categorical data.
+
+Synthetic oversampling works as follows:
+
+- We take one data-point from the minority class and find its K nearest neighbors.
+- We choose one of the K nearest neighbors.
+- We draw a line between the point and its neighbor and sample a point on this line.
+
+![Synthetic Oversampling](./pics/synthetic_oversampling.png)
+
+Two main approaches are possible within the synthetic oversampling method:
+
+1. SMOTE: Synthetic Minority Oversampling Technique. It can be broken down to
+  - Regular SMOTE: connect minority class points to any nearest neighbor (even other classes) and set the point randomly on the line.
+  - Borderline SMOTE: we first classify the nearest points to be outliers (all neighbors from a different class), safe (all neighbors from the same class) or in-danger (at least half of points from same class). Then, minority in-danger points are connected to (1) minority points or (2) whatever is nearby.
+  - SVM SMOTE: use minority support vectors to generate new points.
+2. ADASYN: Adaptive synthetic sampling
+  - For each minority point, look at classes in the neighborhood and generate samples proportional to competing classes. Thus, areas with low minority class density are filled, preventing miss-classification.
+
+![Oversampling: SMOTE](./pics/oversampling_smote.png)
+
+![Oversampling: ADASYN](./pics/oversampling_adasyn.png)
+
+### 7.4 Undersampling: Nearing Neighbor Methods
+
+Undersampling: Majority class is reduced to be similar in size to the minority class.
+
+Approaches are used to decide which points to keep in the majority class:
+
+- NearMiss-1: Majority points closest to nearby minority points are kept. It is sensible to outliers.
+- NearMiss-2: Majority points closest to distant minority points are kept.
+- NearMiss-3: Those closest to majority neighbors of minority points.
+- Tomek links: A Tomek link exists if two nearest samples are from different classes. Then, we can either remove the majority class from the Tomek pair or remove both class points.
+- Edited Nearest Neighbors: We run KNN with `K=1`; if we miss-classify a point in a majority class, that point is removed.
+
+![Undersampling: NearMiss-1](./pics/undersampling_nearmiss_1.png)
+
+![Undersampling: NearMiss-2](./pics/undersampling_nearmiss_2.png)
+
+![Undersampling: NearMiss-3](./pics/undersampling_nearmiss_3.png)
+
+![Undersampling: Edited Nearest Neighbors](./pics/undersampling_edited_knn.png)
+
+### 7.5 Combining Under and Oversampling
+
+Often, over- and under-sampling are applied in combination to the minority and majority classes, e.g.:
+
+- SMOTE (upsample) + Tomek's Link (downsample)
+- SMOTE (upsample) + Edited Nearest Neighbors (downsample)
+
+### 7.6 Blagging: Balanced Bagging
+
+Blagging = Balanced Bagging.
+
+Blagging consists in taking bootstrapped samples from the original population which are downsampled and used to fit trees. Then, we take the majority vote. The innovation or key difference to bagging is in the fact that each bootstrapped sample is downsampled.
+
+![Blagging: balanced Bagging](./pics/blagging_balanced_bagging.png)
+
+### 7.7 Final Recommendations: How to Deal with Unbalanced Classes
+
+- First of all, make the `train_test_split`.
+- Use sensible metrics:
+  - AUC
+  - F1
+  - Cohen's Kappa
+  - Do not use accuracy!
+
+### 7.8 Python Lab: Tackling Imbalanced Datasets
+
+The notebook
+
+`lab_jupyter_imbalanced_data.ipynb`
+
+shows examples of how to deal with imbalanced datasets, following the previous sub-sections from Section 7.
+
+We need to install the package [imbalanced-learn](https://imbalanced-learn.org/stable/).
+
+```bash
+pip install imbalanced-learn==0.8.0
+```
+
+Several unbalanced datasets are tried:
+
+- Credit Card Fraud Detection
+- Predicting Customer Churn
+- Tumor Type Estimation
+- Predicting Job Change
+
+General notes and conclusions:
+
+- Accuracy is often not a good metric; in particular, accuracy is a bad metric for unbalanced datasets.
+- Precision measures how bad the Type I error is.
+- Recall measures how bad the Type II error is.
+- In each business case (e.g., illness detection, fraud detection), we need to choose the cost of each type of error: Type I or II; then, we select the right metric.
+- Techniques to deal with unbalanced datasets; first, measure the class distribution (`value_counts()`) and the metric to improve, e.g. recall. Then, apply:
+  - Weights: use weights which are inverse to the ratio of the class; these are used in the loss computation.
+    - Weights can be passed in model instantiation or
+    - in the `fit` method
+  - Resampling:
+    - Oversampling minority class; e.g. SMOTE: create points in between a minority point and its nearest neighbors
+    - Undersampling majority class; e.g., randomly remove majority points.
+- **Important note: there is no single best approach for all cases!** We need to:
+  - Choose metric to improve.
+  - Compute metric with original dataset.
+  - Try different techniques (resampling, weights) and check metric.
+  - Select the best technique.
+
+In the following, a summary of the code in the notebook is provided:
+
+```python
+
+```
 
