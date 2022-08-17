@@ -2769,7 +2769,7 @@ General notes and conclusions:
 - Recall measures how bad the Type II error is.
 - In each business case (e.g., illness detection, fraud detection), we need to choose the cost of each type of error: Type I or II; then, we select the right metric.
 - Techniques to deal with unbalanced datasets; first, measure the class distribution (`value_counts()`) and the metric to improve, e.g. recall. Then, apply:
-  - Weights: use weights which are inverse to the ratio of the class; these are used in the loss computation.
+  - Weights: use weights which are inverse to the ratio of the class; however, we can try several weight values. Weights are used in the loss computation.
     - Weights can be passed in model instantiation or
     - in the `fit` method
   - Resampling:
@@ -2784,6 +2784,87 @@ General notes and conclusions:
 In the following, a summary of the code in the notebook is provided:
 
 ```python
+
+import pandas as pd
+import numpy as np 
+import imblearn
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score, precision_recall_fscore_support, confusion_matrix, plot_confusion_matrix, precision_score, recall_score, roc_auc_score
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import GridSearchCV
+
+### -- 1. Load and split dataset
+
+X = df.drop('target', axis=1)
+y = df['target']
+
+# Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state = rs)
+
+# Visualize the count for each class
+df['target'].value_counts().plot.bar(color=['green', 'red'])
+# We see that the ratio is 10:1; then, weights could be 0.9 and 0.1
+
+### -- 2. Weights as hyperparameter to tune
+
+# Class weights can be passed in a dictionary
+# choosing values which are inverse to the frequency of the class.
+# For instance, if class 0 : class 1 has a ratio of 10:1, we could define:
+class_weight = {}
+class_weight[0] = 0.1 # 10:1
+class_weight[1] = 0.9 # 1:10
+model = RandomForestClassifier(random_state=rs, class_weight=class_weight)
+
+# However, we can also treat class weights as hyperparameter to be tuned
+params_grid = {
+  'max_depth': [5, 10, 15, 20],
+  'n_estimators': [25, 50, 100],
+  'min_samples_split': [2, 5],
+  'class_weight': [{0:0.1, 1:0.9}, {0:0.2, 1:0.8}, {0:0.3, 1:0.7}]
+}
+model = RandomForestClassifier(random_state=rs)
+grid_search = GridSearchCV(estimator = model, 
+                       param_grid = params_grid, 
+                       scoring='f1',
+                       cv = 5, verbose = 1)
+grid_search.fit(X_train, y_train)
+best_params = grid_search.best_params_
+
+### -- 3. Compute metrics
+
+# Calculate the precision, recall, f5 given the y_test and predictions
+# Note that we use beta=5 which means we think the cost of positive class is 5 times of negative class
+# You could try other beta values yourself
+accuracy = accuracy_score(y_test, preds)
+precision, recall, fbeta, support = precision_recall_fscore_support(y_test, preds, beta=5, pos_label=1, average='binary')
+auc = roc_auc_score(y_test, preds)
+print(f"Accuracy is: {accuracy:.2f}")
+print(f"Precision is: {precision:.2f}")
+print(f"Recall is: {recall:.2f}")
+print(f"Fscore is: {fbeta:.2f}")
+print(f"AUC is: {auc:.2f}")
+
+### -- 4. Resampling function: Oversampling and Undersampling
+
+from imblearn.over_sampling import RandomOverSampler, SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+
+# Resampling: under- and oversampling
+def resample(X_train, y_train):
+    # Oversampling: minority class(es) synthetically multiplied
+    # SMOTE oversampler: new data-points between a minority point and its nearest neighbors
+    smote_sampler = SMOTE(random_state = 123)
+    # Undersampling: number of points of majority class decreased
+    # Random undersampler: removed points randomly selected
+    under_sampler = RandomUnderSampler(random_state=123)
+    # Resampled datasets
+    X_smo, y_smo = smote_sampler.fit_resample(X_train, y_train)
+    X_under, y_under = under_sampler.fit_resample(X_train, y_train)
+    return X_smo, y_smo, X_under, y_under
+
+X_smo, y_smo, X_under, y_under = resample(X_train, y_train)
+# Now, fit new model and compute its metrics
 
 ```
 
