@@ -2728,7 +2728,7 @@ Often, over- and under-sampling are applied in combination to the minority and m
 
 Blagging = Balanced Bagging.
 
-Blagging consists in taking bootstrapped samples from the original population which are downsampled and used to fit trees. Then, we take the majority vote. The innovation or key difference to bagging is in the fact that each bootstrapped sample is downsampled.
+Blagging consists in taking bootstrapped samples from the original population which are downsampled continuously and used to fit trees. Then, we take the majority vote. The innovation or key difference to bagging is in the fact that each bootstrapped sample is downsampled.
 
 ![Blagging: balanced Bagging](./pics/blagging_balanced_bagging.png)
 
@@ -2799,7 +2799,7 @@ from sklearn.model_selection import GridSearchCV
 X = df.drop('target', axis=1)
 y = df['target']
 
-# Split
+# Stratified split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state = rs)
 
 # Visualize the count for each class
