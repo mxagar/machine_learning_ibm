@@ -1,4 +1,4 @@
-# Supervised Machine Learning: Classificationo
+# Supervised Machine Learning: Classification
 
 These are my notes and the code of the [IBM Machine Learning Professional Certificate](https://www.coursera.org/professional-certificates/ibm-machine-learning) offered by IBM & Coursera.
 
