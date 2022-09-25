@@ -20,7 +20,7 @@ This folder contains:
 - `Report.md`: the report generated for the IBM submission
 - `pics/`: pictures used in the report.
 
-Note that the `README.md` of the repossitory [airbnb_data_analysis](https://github.com/mxagar/airbnb_data_analysis) and the [blog post](https://mikelsagardia.io/blog/airbnb-spain-basque-data-analysis.html) contain pieces of that report.
+Note that the `README.md` of the repository [airbnb_data_analysis](https://github.com/mxagar/airbnb_data_analysis) and the [blog post](https://mikelsagardia.io/blog/airbnb-spain-basque-data-analysis.html) contain pieces of that report.
 
 Mikel Sagardia, 2022.  
 No guarantees.
