@@ -18,45 +18,75 @@ No guarantees
 
 ## Overview of Contents
 
-1. [Logistic Regression (Week 1)](#1.-Logistic-Regression)
-  - 1.1 What is Classification?
-  - 1.2 Logistic Regression
-  - 1.3 Classification with Multiple Classes
-  - 1.4 Logistic Regression in Python with Scikit-Learn
-  - 1.5 Classification Error Metrics: Confusion Matrix, Accuracy, Specificity, Precision, and Recall
-  - 1.6 ROC and Precision-Recall Curves
-  - 1.7 Multi-Class Metrics
-  - 1.8 Metrics in Python with Scikit-Learn
-  - 1.9 Python Lab: Human Activity with Logistic Regression
-  - 1.10 Python Example: Food Items with Logistic Regression
-2. [K Nearest Neighbors (Week 2)](#2.-K-Nearest-Neighbors)
-  - 2.1 Decision Boundary
-  - 2.2 Distance Measure
-  - 2.3 Regression
-  - 2.4 Pros and Cons
-  - 2.5 KNN in Python with Scikit-Learn
-  - 2.6 Python Lab: Customer Churn Classification with KNN
-  - 2.7 Python Example: Tumor Classification with KNN
-3. [Support Vector Machines (Week 3)](#3.-Support-Vector-Machines)
-  - 3.1 Cost Function: Hinge Loss
-  - 3.2 Model and Regularization
-  - 3.3 SVM Syntax in Scikit-Learn
-  - 3.4 SVMs with Kernels: Gaussian Kernels
-  - 3.5 What to Use When?
-  - 3.6 Non-Linear SVM Syntax in Scikit-Learn
-  - 3.7 Python Lab: Wine Classification with SVMs
-  - 3.8 Python Example: Food Item Classification with SVMs
-4. [Decision Trees (Week 4)](#4.-Decision-Trees)
-  - 4.1 Introduction to Decision Trees
-  - 4.2 Building a Decision Tree
-  - 4.3 Entropy-based Splitting
-  - 4.4 Choosing Splitting Criteria
-  - 4.5 Pros and Cons of Decision Trees
-  - 4.6 Decision Trees' Syntax in Scikit-Learn
-  - 4.7 Python Lab: Wine Classification with Decision Trees
-  - 4.8 Python Example: Tumor Classification with Decision Trees
-5. [Ensemble-Based Methods and Bagging](#5.-Ensemble-Based-Methods-and-Bagging)
-
+- [Supervised Machine Learning: Classification](#supervised-machine-learning-classification)
+  - [Overview of Contents](#overview-of-contents)
+  - [1. Logistic Regression](#1-logistic-regression)
+    - [1.1 What is Classification?](#11-what-is-classification)
+    - [1.2 Logistic Regression](#12-logistic-regression)
+    - [1.3 Classification with Multiple Classes](#13-classification-with-multiple-classes)
+    - [1.4 Logistic Regression in Python with Scikit-Learn](#14-logistic-regression-in-python-with-scikit-learn)
+    - [1.5 Classification Error Metrics: Confusion Matrix, Accuracy, Specificity, Precision, and Recall](#15-classification-error-metrics-confusion-matrix-accuracy-specificity-precision-and-recall)
+    - [1.6 ROC and Precision-Recall Curves](#16-roc-and-precision-recall-curves)
+    - [1.7 Multi-Class Metrics](#17-multi-class-metrics)
+    - [1.8 Metrics in Python with Scikit-Learn](#18-metrics-in-python-with-scikit-learn)
+    - [1.9 Python Lab: Human Activity](#19-python-lab-human-activity)
+    - [1.10 Python Example: Food Items](#110-python-example-food-items)
+  - [2. K Nearest Neighbors](#2-k-nearest-neighbors)
+    - [2.1 Decision Boundary](#21-decision-boundary)
+    - [2.2 Distance Measure](#22-distance-measure)
+    - [2.3 Regression](#23-regression)
+    - [2.4 Pros and Cons](#24-pros-and-cons)
+    - [2.5 KNN in Python with Scikit-Learn](#25-knn-in-python-with-scikit-learn)
+    - [2.6 Python Lab: Customer Churn Classification](#26-python-lab-customer-churn-classification)
+    - [2.7 Python Example: Tumor Classification](#27-python-example-tumor-classification)
+  - [3. Support Vector Machines](#3-support-vector-machines)
+    - [3.1 Cost Function: Hinge Loss](#31-cost-function-hinge-loss)
+    - [3.2 Model and Regularization](#32-model-and-regularization)
+    - [3.3 SVM Syntax in Scikit-Learn](#33-svm-syntax-in-scikit-learn)
+    - [3.4 SVMs with Kernels: Gaussian Kernels](#34-svms-with-kernels-gaussian-kernels)
+    - [3.5 What to Use When?](#35-what-to-use-when)
+    - [3.6 Non-Linear SVM Syntax in Scikit-Learn](#36-non-linear-svm-syntax-in-scikit-learn)
+    - [3.7 Python Lab: Wine Classification with SVMs](#37-python-lab-wine-classification-with-svms)
+    - [3.8 Python Example: Food Item Classification with SVMs](#38-python-example-food-item-classification-with-svms)
+  - [4. Decision Trees](#4-decision-trees)
+    - [4.1 Introduction to Decision Trees](#41-introduction-to-decision-trees)
+    - [4.2 Building a Decision Tree](#42-building-a-decision-tree)
+    - [4.3 Entropy-based Splitting](#43-entropy-based-splitting)
+    - [4.4 Choosing Splitting Criteria](#44-choosing-splitting-criteria)
+    - [4.5 Pros and Cons of Decision Trees](#45-pros-and-cons-of-decision-trees)
+    - [4.6 Decision Trees' Syntax in Scikit-Learn](#46-decision-trees-syntax-in-scikit-learn)
+    - [4.7 Python Lab: Wine Classification with Decision Trees](#47-python-lab-wine-classification-with-decision-trees)
+    - [4.8 Python Example: Tumor Classification with Decision Trees](#48-python-example-tumor-classification-with-decision-trees)
+  - [5. Ensemble Models](#5-ensemble-models)
+    - [5.1 Ensemble-Based Methods and Bagging](#51-ensemble-based-methods-and-bagging)
+    - [5.2 Random Forests](#52-random-forests)
+    - [5.3 Python Demo: Random Forests](#53-python-demo-random-forests)
+    - [5.4 Python Lab: Bagging](#54-python-lab-bagging)
+    - [5.5 Python Demo: Bagging](#55-python-demo-bagging)
+    - [5.6 Boosting](#56-boosting)
+      - [AdaBoost and Gradient Boosting](#adaboost-and-gradient-boosting)
+      - [Comparing Bagging and Boosting](#comparing-bagging-and-boosting)
+      - [Tuning Gradient Boosting](#tuning-gradient-boosting)
+      - [AdaBoost and GradientBoosting Syntax](#adaboost-and-gradientboosting-syntax)
+      - [XGBoost](#xgboost)
+    - [5.7 Stacking](#57-stacking)
+    - [5.8 Python Lab: Human Activity Classification with Boosting](#58-python-lab-human-activity-classification-with-boosting)
+    - [5.9 Python Demos: AdaBoost and Stacking](#59-python-demos-adaboost-and-stacking)
+    - [5.10 Ensemble Methods: Summary](#510-ensemble-methods-summary)
+  - [6. Model Interpretability](#6-model-interpretability)
+    - [6.1 Examples of Self-Interpretable and Non-Self-Interpretable Models](#61-examples-of-self-interpretable-and-non-self-interpretable-models)
+    - [6.2 Model Agnostic Explanations](#62-model-agnostic-explanations)
+    - [6.3 Surrogate Models](#63-surrogate-models)
+    - [6.4 Python Lab: Model Interpretability](#64-python-lab-model-interpretability)
+  - [7. Dealing with Unbalanced Datasets](#7-dealing-with-unbalanced-datasets)
+    - [7.1 Down- and Upsampling](#71-down--and-upsampling)
+    - [7.2 Weighting and Stratified Sampling](#72-weighting-and-stratified-sampling)
+    - [7.3 Random and Synthetic Oversampling](#73-random-and-synthetic-oversampling)
+    - [7.4 Undersampling: Nearing Neighbor Methods](#74-undersampling-nearing-neighbor-methods)
+    - [7.5 Combining Under and Oversampling](#75-combining-under-and-oversampling)
+    - [7.6 Blagging: Balanced Bagging](#76-blagging-balanced-bagging)
+    - [7.7 Final Recommendations: How to Deal with Unbalanced Classes](#77-final-recommendations-how-to-deal-with-unbalanced-classes)
+    - [7.8 Python Lab: Tackling Imbalanced Datasets](#78-python-lab-tackling-imbalanced-datasets)
 
 ## 1. Logistic Regression
 
@@ -1355,7 +1385,7 @@ The Gini index curve is also bulgy but the is no logarithm in it, so it's easier
 Decision trees are very prone to overfit the dataset: they learn noise. The solution to that is to prune the trees, which can be achieved with the methods mentioned in Section 4.2:
 
 - We force a `max_depth`.
-- We prune nodes that don't provide an information grain above a threshold. We can also use a simple classification error to that end.
+- We prune nodes that don't provide an information gain above a threshold. We can also use a simple classification error to that end.
 
 Decision trees have the following advantages:
 
