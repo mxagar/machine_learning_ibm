@@ -2380,12 +2380,12 @@ However, the permutation feature importance doesn't give us information on the m
 
 ### 6.3 Surrogate Models
 
-Surrogate models are linear or highly interpretable models which are built to simulate models with low interpretability. Then, if they are close enough, we interprest the surrogate models.
+Surrogate models are linear or highly interpretable models which are built to simulate models with low interpretability. Then, if they are close enough, we interpret the surrogate models.
 
 Two types of surrogate models are possible:
 
 - Global: a new linear/tree model is built with the entire dataset and the predictions of the black box model.
-- Local: one/few instance/s or row/s of the dataset is/are taken (a row we'd like to analyze); then, it is slightly altered sampling from the distributions of the features, so we obtaina new dataset. Then, we train a model with the new dataset.
+- Local: one/few instance/s or row/s of the dataset is/are taken (a row we'd like to analyze); then, it is slightly altered sampling from the distributions of the features, so we obtain a new dataset. Then, we train a model with the new dataset.
 
 **Global surrogate models** are straightforward to build and help explain how the model works. We basically take `X_train` and `y_pred_1 = model_1(X_train)` and build a new linear/tree model, which yields `y_pred_2 = model_2(X_train)`. Then, the difference `y_pred_1 - y_pred_2` is evaluated with an appropriate metric: MSE, cross-entropy loss, etc. If the difference is small, the surrogate model is assumed to be good enough to interpret what's going on in the black box.
 
