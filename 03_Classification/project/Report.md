@@ -212,4 +212,7 @@ The final best model is a random forest, and it achieves with the test split:
 
 The classifier seems good enough to be deployed. However, future work involves exploring the following action items to find out whether they bring improvements:
 
-- Add more features
+- Add more variables and levels to the grid search.
+- Consider using polynomial features in random forests.
+- Apply feature selection with LASSO and check its effect.
+- Try other classifiers, such as gradient boosting.
