@@ -27,6 +27,8 @@ No guarantees
   - [2. K-Means Clustering](#2-k-means-clustering)
     - [2.1 Smart Initialization](#21-smart-initialization)
     - [2.2 Metrics for Choosing the Right Number of Clusters `K` and the Correct Clustering](#22-metrics-for-choosing-the-right-number-of-clusters-k-and-the-correct-clustering)
+    - [2.3 Python Implementation](#23-python-implementation)
+    - [2.4 Python Lab: K-Means](#24-python-lab-k-means)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -136,12 +138,52 @@ Which one should we take?
 - If we are concerned with the similarity of the points only, take **inertia**.
 - If we want clusters with similar numbers of points, take **distortion**.
 
-The general approach:
+The general approach would be:
 
 1. Initialize the random centroids with a given `K`
 2. Fit the model and compute the selected metric: inertia / distortion.
 3. Repeat 1-2 several times.
 4. Change `K` and repeat 1-3.
 
-At the end, we take the `K`-clustering combination with the lowest selected metric.
+At the end, we take the `K`-clustering combination with the lowest selected metric However, the reality is that as `K` increases, the metrics will decrease; we follow the *elbow method* to choose the smallest `K` possible that yields a low metric:
 
+![Elbow Method](./pics/k_means_elbow.jpg)
+
+Before the *elbow* or inflection point the inertia/distortion decrease dramatically, but after it they plateau.
+
+Visual inspection of the labeled data points is always not possible, because of high dimensions; thus, we use the elbow method.
+
+### 2.3 Python Implementation
+
+```python
+# Alternative with mini-batches: MiniBatchKMeans
+from sklearn.cluster import KMeans
+
+kmeans = KMeans(n_clusters=3,
+                init='k-means++')
+
+kmeans.fit(X1)
+y_pred = kmeans.predict(X2)
+
+# Inertia
+kmeans.inertia_
+
+# Cluster centers
+km.cluster_centers_
+# Labels
+km.labels_
+
+# Elbow method
+inertia = []
+for k in range(10):
+    kmeans = KMeans(n_clusters=k,
+                    init='k-means++')
+    kmeans.fit(X1)
+    inertia.append(kmeans.inertia_)
+```
+
+### 2.4 Python Lab: K-Means
+
+
+
+`./lab/04a_LAB_KMeansClustering.ipynb`
