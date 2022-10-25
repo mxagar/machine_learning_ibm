@@ -11,9 +11,11 @@ The Specialization is divided in 6 courses, and each of them has its own folder 
 5. [Deep Learning and Reinforcement Learning](https://www.coursera.org/learn/deep-learning-reinforcement-learning?specialization=ibm-machine-learning)
 6. [Specialized Models: Time Series and Survival Analysis](https://www.coursera.org/learn/time-series-survival-analysis?specialization=ibm-machine-learning)
 
-See also my other repository which contains the notes and exercises of the [Machine Learning](https://www.coursera.org/learn/machine-learning) course by Andrew Ng at Coursera / Standford:
+**To use this notes, just go to the topic folder and follow the Markdown file in there.** Each topic folder contains a `lab/` directory with example/exercise notebooks.
 
-[machine_learning_coursera](https://github.com/mxagar/machine_learning_coursera)
+If you are interested in similar contents, have a look at my other repository [machine_learning_coursera](https://github.com/mxagar/machine_learning_coursera), which contains the notes and exercises of the [Machine Learning](https://www.coursera.org/learn/machine-learning) course by Andrew Ng at Coursera / Standford.
 
-Mikel Sagardia, 2022.
+Mikel Sagardia, 2022.  
 No guarantees.
+
+If you find this repository helpful and use it, please link to the original source.
