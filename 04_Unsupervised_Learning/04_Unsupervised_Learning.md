@@ -53,6 +53,7 @@ In practice, high dimensions have many drawbacks and we talk about the *curse of
 - More features might introduce noise we need to learn to filter, otherwise we overfit
 - Imagine KNN or any other distance based algorithm: with more dimensions, the number of data-points we need to cover the complete feature space increases exponentially; for a data point to get its proper nearest neighbors, we need many training points.
 - We need more computational power to train on datasets with high dimensionality.
+- Higher incidence of outliers.
 
 In the image, a variable of 1D has 10 categories; if we add more variables like that, the number of data-points to cover the feature spaces increases exponentially.
 
@@ -81,7 +82,7 @@ Clustering:
 - Classification: spam filter
 - Anomaly detection: fraudulent transactions
 - Customer segmentation
-- Improvement of supervised models: find clusters and apply supervised models for each cluster! That doesn't work always, but it's often worth trying.
+- **Improvement of supervised models: find clusters and apply supervised models for each cluster! That doesn't work always, but it's often worth trying.**
 
 Dimension Reduction:
 
@@ -153,6 +154,8 @@ Before the *elbow* or inflection point the inertia/distortion decrease dramatica
 
 Visual inspection of the labeled data points is always not possible, because of high dimensions; thus, we use the elbow method.
 
+In the case the inertia/distortion curve is not clear for the elbow method, we can use the [Silhouette Score](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.silhouette_score.html#sklearn.metrics.silhouette_score).
+
 ### 2.3 Python Implementation
 
 ```python
@@ -184,6 +187,158 @@ for k in range(10):
 
 ### 2.4 Python Lab: K-Means
 
+In this notebook,
 
+`./lab/04a_LAB_KMeansClustering.ipynb`,
 
-`./lab/04a_LAB_KMeansClustering.ipynb`
+three applications are shown:
+
+1. Clustering of a synthetic dataset with K-means.
+2. Optimum clustering of a synthetic dataset with the elbow method using K-means.
+3. Compression of an image with K-means.
+
+The most important lines are summarized in the following:
+
+```python
+
+# Setup and imports
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import scale
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.utils import shuffle
+
+### -- 1. Clustering of a synthetic dataset with K-means
+
+# Helper function that allows us to display data
+# in 2 dimensions an highlights the clusters
+def display_cluster(X,km=[],num_clusters=0):
+    color = 'brgcmyk'
+    alpha = 0.5
+    s = 20
+    if num_clusters == 0:
+        plt.scatter(X[:,0],X[:,1], c=color[0], alpha=alpha, s=s)
+    else:
+        for i in range(num_clusters):
+            plt.scatter(X[km.labels_==i,0], X[km.labels_==i,1], c=color[i], alpha=alpha, s=s)
+            plt.scatter(km.cluster_centers_[i][0], km.cluster_centers_[i][1], c=color[i], marker = 'x', s = 100)
+
+# We define our dataset as a ring of points
+# Infinite clusterings are possible due to rotation symmetry
+angle = np.linspace(0,2*np.pi,20, endpoint = False)
+X = np.append([np.cos(angle)],[np.sin(angle)],0).transpose()
+# No model yet
+display_cluster(X)
+
+num_clusters = 2
+# random_state controls the randomness of the initial state
+# we can also modify init; look at the docu
+km = KMeans(n_clusters=num_clusters,random_state=10,n_init=1) # n_init, number of times the K-mean algorithm will run
+km.fit(X)
+# Now we have a model
+display_cluster(X,km,num_clusters)
+
+# We change the random state
+km = KMeans(n_clusters=num_clusters,random_state=20,n_init=1)
+km.fit(X)
+display_cluster(X,km,num_clusters)
+
+### -- 2. Optimum clustering of a synthetic dataset with the elbow method using K-means
+
+n_samples = 1000
+n_bins = 4 
+centers = [(-3, -3), (0, 0), (3, 3), (6, 6)]
+# make_blobs takes centers and std and creates random points
+X, y = make_blobs(n_samples=n_samples, n_features=2, cluster_std=1.0,
+                  centers=centers, shuffle=False, random_state=42)
+# We display without model: all points in a color.
+display_cluster(X)
+
+# We run it with the original number of clusters
+num_clusters = 4
+km = KMeans(n_clusters=num_clusters)
+km.fit(X)
+display_cluster(X,km,num_clusters)
+
+# Get optimum number of clusters with the elbow method
+# Note that in our case the optimum would be 4
+# but the inertia ALWAYS decreases with K!
+# Sometimes it is not clear where the elbow is,
+# we should take it where the inertia considerably flattens.
+inertia = []
+list_num_clusters = list(range(1,11))
+for num_clusters in list_num_clusters:
+    km = KMeans(n_clusters=num_clusters)
+    km.fit(X)
+    inertia.append(km.inertia_)
+    
+plt.plot(list_num_clusters,inertia)
+plt.scatter(list_num_clusters,inertia)
+plt.xlabel('Number of Clusters')
+plt.ylabel('Inertia');
+
+### -- 3. Compression of an image with K-means.
+
+img = plt.imread('peppers.jpg', format='jpeg')
+plt.imshow(img)
+plt.axis('off')
+
+# Each pixel with its [R,G,B] values becomes a row
+# -1 = img.shape[0]*img.shape[1], because we leave the 3 channels
+# as the second dimension
+img_flat = img.reshape(-1, 3)
+
+img.shape # (480, 640, 3)
+img_flat.shape # (307200, 3)
+
+# Note that in reality we have 256^3 possible colors = 16,777,216
+# but not all of them are used.
+# All the unique/used colors
+len(np.unique(img_flat,axis=0)) # 98452
+
+# K=8 clusters: we allow 8 colors
+kmeans = KMeans(n_clusters=8, random_state=0).fit(img_flat)
+
+# Loop for each cluster center
+# Assign to all pixels with the cluster label
+# the color of the cluster == the cluster centroid
+img_flat2 = img_flat.copy()
+for i in np.unique(kmeans.labels_):
+    img_flat2[kmeans.labels_==i,:] = kmeans.cluster_centers_[i]
+
+img2 = img_flat2.reshape(img.shape)
+plt.imshow(img2)
+plt.axis('off');
+
+# Function which compresses an image to k colors
+def image_cluster(img, k):
+    img_flat = img.reshape(img.shape[0]*img.shape[1],3)
+    kmeans = KMeans(n_clusters=k, random_state=0).fit(img_flat)
+    img_flat2 = img_flat.copy()
+
+    # loops for each cluster center
+    for i in np.unique(kmeans.labels_):
+        img_flat2[kmeans.labels_==i,:] = kmeans.cluster_centers_[i]
+        
+    img2 = img_flat2.reshape(img.shape)
+    return img2, kmeans.inertia_
+
+# Call the function for k between 2 and 20,
+# and draw an inertia curve
+k_vals = list(range(2,21,2))
+img_list = []
+inertia = []
+for k in k_vals:
+    img2, ine = image_cluster(img,k)
+    img_list.append(img2)
+    inertia.append(ine)
+
+# Plot to find optimal number of clusters
+plt.plot(k_vals,inertia)
+plt.scatter(k_vals,inertia)
+plt.xlabel('k')
+plt.ylabel('Inertia');
+```
