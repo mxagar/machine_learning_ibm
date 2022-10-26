@@ -29,6 +29,11 @@ No guarantees
     - [2.2 Metrics for Choosing the Right Number of Clusters `K` and the Correct Clustering](#22-metrics-for-choosing-the-right-number-of-clusters-k-and-the-correct-clustering)
     - [2.3 Python Implementation](#23-python-implementation)
     - [2.4 Python Lab: K-Means](#24-python-lab-k-means)
+  - [3. Computational Difficulties of Clustering Algorithms: Distance Measures](#3-computational-difficulties-of-clustering-algorithms-distance-measures)
+    - [3.1 Cosine and Jaccard Distance](#31-cosine-and-jaccard-distance)
+    - [3.2 Python Demo: Curse of Dimensionality](#32-python-demo-curse-of-dimensionality)
+    - [3.3 Python Notebook: Distance Metrics](#33-python-notebook-distance-metrics)
+  - [4. Common Clustering Algorithms](#4-common-clustering-algorithms)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -342,3 +347,163 @@ plt.scatter(k_vals,inertia)
 plt.xlabel('k')
 plt.ylabel('Inertia');
 ```
+
+## 3. Computational Difficulties of Clustering Algorithms: Distance Measures
+
+Clustering methods rely very heavily on distance measures. There are several distance metrics and each one has pros & cons.
+
+The typical distance measure is the **Euclidean Distance** or **L2**:
+
+`d(x,y) = srqt(sum((x-y)^2))`
+
+Another distance measure: **Manhattan, L1**: `d(x,y) = sum(abs(x-y))`
+
+- It will be larger than L2.
+- It is often used in cases with very high dimensionality, because distance values between point pairs become more unique than L2.
+
+### 3.1 Cosine and Jaccard Distance
+
+**Cosine Distance** takes to data point vectors and computes the angle between both in the feature space:
+
+![Cosine Distance](./pics/cosine_distance.jpg)
+
+The output is `phi = arccos(cos(phi))`, with these properties:
+
+- `cos = 0`: 90 degrees between the vectors
+- `cos = 1`: 0 degrees between the vectors, i.e., the are aligned
+- `cos = -1`: opposite direction
+- The scaling from the origin is not relevant anymore: the end points can be very far away from each other but have the same cosine close to 1.
+- We are more interested between the **relationships between the features** than the distance between the data points in feature space! **How different are the relationships of features between two data points?** `cos = 1` very similar, `cos = 0` orthogonal, `cos = -1` opposite.
+
+However, we should **always check the formula/definition of the cosine distance in the used library**; for instance, in `scipy` the cosine distance is defined as
+
+`d = 1 - cos`, thus it belongs to the range `[0,2]`, with
+
+- $0$: "in the same direction"
+- $1$: "perpendicular"
+- $2$: "in the opposite direction."
+
+We often distinguish between **cosine similarity** and **cosine distance**; for instance, `sklearn` (and in other frameworks, too):
+
+`cosine_distance = 1 - cosine_similarity`
+
+When should we use the cosine distance?
+
+- Euclidean distance is useful for coordinate-based measurements, when the location of the end-point is important.
+- Cosine is better for data that can contain many similar vectors, e.g., text: one text can be the summary of another so the vector end-points are relatively far from each other, but they are aligned! In other words, the location/occurrence/coordinate of the end-point is not important.
+- Euclidean distance is more sensitive to the curse of dimensionality.
+
+**Jaccard Distance** is another distance measure used also with text or, in general, with sets of sequences: it measures the intersection over union of unique words/items (i.e., sets) that appear in two texts/sequences:
+
+![Jaccard Distance](.(pics/jaccard_distance.jpg))
+
+Thus, it measures the similarity of two texts/sequences based on their words/items:
+
+- $1$ means the two sets have nothing in common.
+- $0$ means the two sets are identical.
+
+Note: `sklearn.metrics.jaccard_score` calculates the **Jaccard similarity score**, which is **1 - Jaccard distance**.
+
+### 3.2 Python Demo: Curse of Dimensionality
+
+In this notebook,
+
+`./lab/04b_DEMO_Distance_Dimensionality.ipynb`,
+
+the instructor shows why in higher dimensions the data points start being more far ways.
+
+The analogy with a sphere is used:
+
+- If we circumscribe a circumference of radius R into a square os side R, 21% of the points are outside the circle. Let's call those outside points *distant* points.
+- If we have a sphere and a cube, the distant points are 48%. Thus, the probability of having points that are far away from each other increases.
+- Then, a simulation is done and we see that the percentage dramatically increases with higher dimensions. In fact, with 14 dimensions, less than `2.9e-03 %` of the points are inside the hypersphere. The decrease seems exponential (is it exponential?).
+
+Some other experiments are done with synthetic datasets created with `make_classification`, but the notebook code is not that interesting in terms of practical usage.
+
+### 3.3 Python Notebook: Distance Metrics
+
+In this notebook,
+
+`./lab/DistanceMetrics.ipynb`,
+
+different distance measures are analyzed.
+
+First two auxiliary functions are defined:
+
+1. Average distance: given 2 X & Y datasets with rows of feature vectors, the distances between each x in X to each y in Y are computed, and then, the average.
+
+![Average Distance](./pics/avg_distance.png)
+
+2. Pairwise distance: given 2 X & Y datasets with rows of feature vectors, the distance between paired rows is computed, and then, the average.
+
+![Pairwise Distance](./pics/pairwise_distance.png)
+
+Then, functions and datasets are passed to those functions to see the effect of using one or another distance measure.
+
+The notebook is not that interesting; the most relevant section to me is an example in which two groups or strata with categorical features are compared using the Jaccard distance: In deed, if we one-hot encode categorical columns, we can compute distances between datasets/samples.
+
+```python
+# Scipy API of distance functions
+# cityblock = Manhattan
+from scipy.spatial.distance import euclidean, cityblock, cosine
+
+# Scikit-Learn API of distance functions
+from sklearn.metrics import jaccard_score
+from sklearn.metrics.pairwise import cosine_distances, paired_euclidean_distances, paired_manhattan_distances, cosine_similarity
+
+# This function will allow us to find the average distance between two sets of data
+def avg_distance(X1, X2, distance_func):
+    from sklearn.metrics import jaccard_score
+    #print(distance_func)
+    res = 0
+    for x1 in X1:
+        for x2 in X2:
+            if distance_func == jaccard_score: # the jaccard_score function only returns jaccard_similarity
+                res += 1 - distance_func(x1, x2)
+            else:
+                res += distance_func(x1, x2)
+    return res / (len(X1) * len(X2))
+
+# This function will allow us to find the average pairwise distance
+def avg_pairwise_distance(X1, X2, distance_func):
+    return sum(map(distance_func, X1, X2)) / min(len(X1), len(X2))
+
+# The function avg_pairwise_distance(X1, X2, distance_func)
+# is equivalent to
+paired_euclidean_distances(X1, X2).mean()
+
+####
+
+# Jaccard distance for categorical datasets
+df = pd.read_csv('breast-cancer.csv')
+df.head()
+df.columns # All categorical, even age
+# 'Class', 'age', 'menopause', 'tumor-size', 'inv-nodes',
+# 'node-caps', 'deg-malig', 'breast', 'breast-quad', 'irradiat'
+
+print(sorted(df['age'].unique()))
+# ['20-29', '30-39', '40-49', '50-59', '60-69', '70-79']
+
+# One-hot encode all columns except age
+from sklearn.preprocessing import OneHotEncoder
+OH = OneHotEncoder()
+X = OH.fit_transform(df.loc[:, df.columns != 'age']).toarray()
+
+# Take two strata: two age groups
+X30to39 = X[df[df.age == '30-39'].index]
+X60to69 = X[df[df.age == '60-69'].index]
+X30to39.shape, X60to69.shape
+# ((36, 39), (57, 39))
+
+avg_distance(X30to39, X30to39, jaccard_score)
+# 0.6435631883548536
+
+avg_distance(X60to69, X60to69, jaccard_score)
+# 0.6182114564956281
+
+avg_distance(X30to39, X60to69, jaccard_score)
+# 0.7324778699972173
+```
+
+## 4. Common Clustering Algorithms
+
