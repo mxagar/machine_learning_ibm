@@ -39,6 +39,8 @@ No guarantees
     - [4.3 Python Syntax for Hierarchical Agglomerative Clustering](#43-python-syntax-for-hierarchical-agglomerative-clustering)
     - [4.4 DBSCAN: Density-Based Spatial Clustering of Applications with Noise](#44-dbscan-density-based-spatial-clustering-of-applications-with-noise)
       - [Algorithm](#algorithm)
+      - [Discussion](#discussion)
+      - [Python Syntax](#python-syntax)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -603,9 +605,38 @@ Thus, clusters are connected core and density-reachable points.
 
 1. We take a random point that has not been labelled and insert it to a queue (e.g., FIFO)
 2. We pop a/the point from the queues and draw a circle or radius `epsilon` around it.
-3. If there are at least `n_clu` points inside, it's a core point, else a density-reachable.
+3. If there are at least `n_clu` core points inside, it's a core point, else a density-reachable.
 4. We insert all the points inside into the queue.
 5. We repeat 2-4 until the queues is empty. Then, we go to step 1, and repeat. The algorithm ends when all points have been labelled.
 
 ![DBSCAN Algorithm](./pics/dbscan_algorithm.jpg)
 
+![DBSCAN Example](./pics/dbscan_example.jpg)
+
+#### Discussion
+
+Strengths:
+
+- No need to set number of clusters.
+- Allows for noise.
+- Can handle arbitrary-shaped clusters.
+
+Weaknesses:
+
+- Requires two parameters, and finding appropriate values for them can be difficult.
+- Doesn't do well with clusters of different densities.
+
+#### Python Syntax
+
+```python
+from sklearn.cluster import DBSCAN
+
+db = DBSCAN(eps=3,
+            min_samples=3)
+
+df.fit(X)
+# You cannot call predict,
+# instead, you get the clusters for the current dataset 
+# labels: -1, 0, 1, 2, ...
+clusters = db.labels_
+```
