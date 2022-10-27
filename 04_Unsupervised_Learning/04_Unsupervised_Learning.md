@@ -36,6 +36,9 @@ No guarantees
   - [4. Common Clustering Algorithms](#4-common-clustering-algorithms)
     - [4.1 Hierarchical Agglomerative Clustering](#41-hierarchical-agglomerative-clustering)
     - [4.2 Hierarchical Linkage Types](#42-hierarchical-linkage-types)
+    - [4.3 Python Syntax for Hierarchical Agglomerative Clustering](#43-python-syntax-for-hierarchical-agglomerative-clustering)
+    - [4.4 DBSCAN: Density-Based Spatial Clustering of Applications with Noise](#44-dbscan-density-based-spatial-clustering-of-applications-with-noise)
+      - [Algorithm](#algorithm)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -541,11 +544,68 @@ At some point, we have only clusters and they start merging. Thus, We need a sto
 We can use at least 4 linkage types:
 
 - Single: minimum pairwise distance between clusters, i.e., distance between closest points in different clusters.
-  - Pro:
-  - Con: 
-- Complete:
-- Average:
-- Ward: 
+  - Pro: we can achieve clear boundaries.
+  - Con: susceptible to noise.
+- Complete: maximum pairwise distance between clusters, i.e., compute the furthest point pairs in different clusters and select the minimum pair.
+  - Pro: less susceptible to noise.
+  - Con: clusters are taken apart.
+- Average: distances between cluster centroids are used.
+  - Pros & Cons: a mixture of the single & complete approach.
+- Ward: the inertia of each cluster is computed and we merged based on best inertia, i.e., the pair which minimizes the inertia is merged; this is similar to K-means.
+  - Pros & Cons: a mixture of the single & complete approach.
 
 ![Hierarchical Linkage Types: Single](./pics/linkage_single.jpg)
+
+![Hierarchical Linkage Types: Complete](./pics/linkage_complete.jpg)
+
+![Hierarchical Linkage Types: Average](./pics/linkage_average.jpg)
+
+![Hierarchical Linkage Types: Ward](./pics/linkage_ward.jpg)
+
+### 4.3 Python Syntax for Hierarchical Agglomerative Clustering
+
+```python
+from sklearn.cluster import AgglomerativeClustering
+
+# We can decide the number of clusters or a distance threshold as criterium:
+# distance_threshold, n_clusters
+agg = AgglomerativeClustering(  n_clusters=3, 
+                                affinity='euclidean', # distance metric
+                                linkage='ward')
+
+agg.fit(X1)
+y_pred = agg.predict(X2)
+```
+
+### 4.4 DBSCAN: Density-Based Spatial Clustering of Applications with Noise
+
+A key feature of this algorithm is that it truly finds clusters of data, i.e., we do not partition the data:
+
+- We can have points that don't belong to any cluster.
+- It finds core points in high density regions and expands clusters from them, adding points that are at least at a given distance.
+- The algorithm ends when all points have been classified in a cluster or as noise.
+
+Inputs for DBSCAN:
+
+- Distance metric.
+- `epsilon`: radius of local neighborhood
+- `n_clu`: density threshold (for a fixed `epsilon`); core points are those which have more than `n_clu` neighbors in their local `epsilon`-neighborhood.
+
+There are 3 possible labels for any point in DBSCAN:
+
+- Core: those which have more than `n_clu` neighbors in their local `epsilon`-neighborhood.
+- Density-reachable: an `epsilon`-neighbor of a core point that has fewer than `n_clu` neighbors itself. It's still part of the cluster, because it's in the `epsilon`-neighborhood.
+- Noise: point that is not part of any cluster, because it has no core points in its `epsilon`-neighborhood.
+
+Thus, clusters are connected core and density-reachable points.
+
+#### Algorithm
+
+1. We take a random point that has not been labelled and insert it to a queue (e.g., FIFO)
+2. We pop a/the point from the queues and draw a circle or radius `epsilon` around it.
+3. If there are at least `n_clu` points inside, it's a core point, else a density-reachable.
+4. We insert all the points inside into the queue.
+5. We repeat 2-4 until the queues is empty. Then, we go to step 1, and repeat. The algorithm ends when all points have been labelled.
+
+![DBSCAN Algorithm](./pics/dbscan_algorithm.jpg)
 
