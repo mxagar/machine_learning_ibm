@@ -34,6 +34,8 @@ No guarantees
     - [3.2 Python Demo: Curse of Dimensionality](#32-python-demo-curse-of-dimensionality)
     - [3.3 Python Notebook: Distance Metrics](#33-python-notebook-distance-metrics)
   - [4. Common Clustering Algorithms](#4-common-clustering-algorithms)
+    - [4.1 Hierarchical Agglomerative Clustering](#41-hierarchical-agglomerative-clustering)
+    - [4.2 Hierarchical Linkage Types](#42-hierarchical-linkage-types)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -506,4 +508,44 @@ avg_distance(X30to39, X60to69, jaccard_score)
 ```
 
 ## 4. Common Clustering Algorithms
+
+### 4.1 Hierarchical Agglomerative Clustering
+
+In hierarchical agglomerative clustering we iteratively find the two closest items in our dataset and cluster them together; an item can be
+
+- a data point
+- or a cluster.
+
+In order for that to work, we need to define:
+
+1. A good distance metric.
+2. A type of linkage for computing distances between point-cluster or cluster-cluster; e.g.:
+   - distance from point to average point in cluster,
+   - distance between closest points between clusters,
+   - etc.
+
+With those defined, the algorithm simply finds the next two closest items in the dataset and it clusters them together. In the beginning, we'll have 2 points clustered together:
+
+![Hierarchical Agglomerative Clustering: Start](./pics/hierarchical_agglomerative_clustering_1.jpg)
+
+As we continue, new 2-point clusters will emerge, but at some point, clusters will start merging, since there will be no point pair closer than the actually merged point-cluster or cluster-cluster pair:
+
+![Hierarchical Agglomerative Clustering: Merge Clusters](./pics/hierarchical_agglomerative_clustering_2.jpg)
+
+At some point, we have only clusters and they start merging. Thus, We need a stop criterium, otherwise the algorithm makes a big unique cluster! That criterium is a distance threshold: when all clusters are further than that threshold from each other, we stop.
+
+![Hierarchical Agglomerative Clustering: Merge Clusters](./pics/hierarchical_agglomerative_clustering_3.jpg)
+
+### 4.2 Hierarchical Linkage Types
+
+We can use at least 4 linkage types:
+
+- Single: minimum pairwise distance between clusters, i.e., distance between closest points in different clusters.
+  - Pro:
+  - Con: 
+- Complete:
+- Average:
+- Ward: 
+
+![Hierarchical Linkage Types: Single](./pics/linkage_single.jpg)
 
