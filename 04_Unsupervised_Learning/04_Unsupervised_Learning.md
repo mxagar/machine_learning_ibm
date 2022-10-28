@@ -29,6 +29,7 @@ No guarantees
     - [2.2 Metrics for Choosing the Right Number of Clusters `K` and the Correct Clustering](#22-metrics-for-choosing-the-right-number-of-clusters-k-and-the-correct-clustering)
     - [2.3 Python Implementation](#23-python-implementation)
     - [2.4 Python Lab: K-Means](#24-python-lab-k-means)
+    - [2.5 Python Notebook: K-Means](#25-python-notebook-k-means)
   - [3. Computational Difficulties of Clustering Algorithms: Distance Measures](#3-computational-difficulties-of-clustering-algorithms-distance-measures)
     - [3.1 Cosine and Jaccard Distance](#31-cosine-and-jaccard-distance)
     - [3.2 Python Demo: Curse of Dimensionality](#32-python-demo-curse-of-dimensionality)
@@ -41,6 +42,9 @@ No guarantees
       - [Algorithm](#algorithm)
       - [Discussion](#discussion)
       - [Python Syntax](#python-syntax)
+    - [4.5 Mean Shift](#45-mean-shift)
+      - [Discussion](#discussion-1)
+      - [Python Syntax](#python-syntax-1)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -355,6 +359,15 @@ plt.xlabel('k')
 plt.ylabel('Inertia');
 ```
 
+### 2.5 Python Notebook: K-Means
+
+In this notebook,
+
+`./lab/KMeansClustering.ipynb`,
+
+
+
+
 ## 3. Computational Difficulties of Clustering Algorithms: Distance Measures
 
 Clustering methods rely very heavily on distance measures. There are several distance metrics and each one has pros & cons.
@@ -640,3 +653,43 @@ df.fit(X)
 # labels: -1, 0, 1, 2, ...
 clusters = db.labels_
 ```
+
+### 4.5 Mean Shift
+
+The **Mean Shift** clustering algorithm is very similar to the K-Means algorithm, but the cluster centroid is not shifted to the center of mass, but to the point with highest local density. The algorithm ends when all points are assigned to a cluster.
+
+In order to measure the point with highest local density, a window is defined centered in each point; then, the weighted mean of the points within that window is measured to compute the new window center. Weighting occurs according to a kernel function which computes a weight based on the distance between the point in the window and the previous center. For point, the window wanders until a convergence point, called the **mode**. the process is repeated for every point in the dataset; at the end, all the points have a mode assigned - points with the same mode belong to the same cluster.
+
+![Mean Shift: Algorithm](./pics/mean_shift_algorithm.jpg)
+
+In practice, for each point, the window moves in the direction of the density gradient until a **mode** is reached, i.e., the window doesn't move anymore. Note that the final centroids or modes don't need to be dataset points; they are the coordinates in which the local density is highest.
+
+![Mean Shift: Modes](./pics/mean_shift_modes.jpg)
+
+One common kernel for the weight computation is the RBF: Radial Basis Function, or Gaussian; the closest points to the previous centroid have more weight.
+
+![Mean Shift: Weighted Mean, Kernel](./pics/mean_shift_weighted_mean.jpg)
+
+#### Discussion
+
+Strengths:
+
+- Model-free: no assumption on number or shape of clusters.
+- Only one parameter: window size or bandwidth.
+- Robust to outliers: outliers have their own clusters.
+
+Weaknesses:
+
+- Result depends on windows size; it's not easy to get the correct value.
+- Slow: complexity is `m*n^2`, with `m` iterations and `n` points.
+
+#### Python Syntax
+
+```python
+from sklearn.cluster import MeanShift
+
+ms = MeanShift(bandwidth=2)
+ms.fit(X1)
+y_pred = ms.predict(X2)
+```
+
