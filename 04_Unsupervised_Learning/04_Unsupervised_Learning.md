@@ -46,6 +46,7 @@ No guarantees
       - [Algorithm](#algorithm)
       - [Discussion](#discussion)
       - [Python Syntax](#python-syntax-1)
+    - [4.5 Python Lab: DBSCAN](#45-python-lab-dbscan)
     - [4.5 Mean Shift](#45-mean-shift)
       - [Discussion](#discussion-1)
       - [Python Syntax](#python-syntax-2)
@@ -908,6 +909,59 @@ df.fit(X)
 # labels: -1, 0, 1, 2, ...
 clusters = db.labels_
 ```
+
+### 4.5 Python Lab: DBSCAN
+
+In this notebook,
+
+`./lab/DBSCAN.ipynb`,
+
+two examples are shown:
+
+1. Proving Someone Has Bad Handwriting.
+2. Clustering of a Noisy Dataset.
+
+The first uses the `8x8` MNIST dataset from `sklearn`, which is reduced to 2D with T-SNE. Then, DBSCAN is applied to identify clusters and noise/rare data points. The last 3 data points are digits of a "friend" to whom "we'd like to proof that he's got a bad handwriting"; indeed, the digits are either miss-classified or classified as noise.
+
+The second exercise is similar to the first one, but with a synthetic dataset of shape `(1000, 2)`, i.e., no T-SNE needs to be applied.
+
+![DBSCAN Clustering Example](./pics/dbscan_clustering_example.png)
+
+The code of the second example is the following:
+
+```python
+df = pd.read_csv('DBSCAN_exercises.csv')
+df.head()
+df.shape # (1000, 2)
+
+plt.scatter(df['x'], df['y'])
+plt.show()
+
+cluster = DBSCAN(eps=4, min_samples=4)
+cluster.fit(df)
+print(len(set(cluster.labels_) - {1})) # 6
+
+print(f'{100 * (cluster.labels_ == -1).sum() / len(cluster.labels_)}%') # 0%
+
+plt.rcParams['figure.figsize'] = (20,15)
+unique_labels = set(cluster.labels_)
+n_labels = len(unique_labels)
+cmap = plt.cm.get_cmap('brg', n_labels)
+for l in unique_labels:
+    plt.scatter(
+        df['x'][cluster.labels_ == l],
+        df['y'][cluster.labels_ == l],
+        c=[cmap(l)],
+        marker='ov'[l%2],
+        alpha=0.75,
+        s=100,
+        label=f'Cluster {l}' if l >= 0 else 'Noise')
+plt.legend(bbox_to_anchor=[1, 1])
+plt.show()
+plt.rcParams['figure.figsize'] = plt.rcParamsDefault['figure.figsize']
+
+```
+
 
 ### 4.5 Mean Shift
 
