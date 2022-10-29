@@ -30,6 +30,9 @@ No guarantees
     - [2.3 Python Implementation](#23-python-implementation)
     - [2.4 Python Lab: K-Means](#24-python-lab-k-means)
     - [2.5 Python Notebook: K-Means](#25-python-notebook-k-means)
+    - [2.6 Gaussian Mixture Models (GMM)](#26-gaussian-mixture-models-gmm)
+      - [Applications of the Gaussian Mixture Models](#applications-of-the-gaussian-mixture-models)
+      - [Python Syntax](#python-syntax)
   - [3. Computational Difficulties of Clustering Algorithms: Distance Measures](#3-computational-difficulties-of-clustering-algorithms-distance-measures)
     - [3.1 Cosine and Jaccard Distance](#31-cosine-and-jaccard-distance)
     - [3.2 Python Demo: Curse of Dimensionality](#32-python-demo-curse-of-dimensionality)
@@ -41,10 +44,10 @@ No guarantees
     - [4.4 DBSCAN: Density-Based Spatial Clustering of Applications with Noise](#44-dbscan-density-based-spatial-clustering-of-applications-with-noise)
       - [Algorithm](#algorithm)
       - [Discussion](#discussion)
-      - [Python Syntax](#python-syntax)
+      - [Python Syntax](#python-syntax-1)
     - [4.5 Mean Shift](#45-mean-shift)
       - [Discussion](#discussion-1)
-      - [Python Syntax](#python-syntax-1)
+      - [Python Syntax](#python-syntax-2)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -365,8 +368,78 @@ In this notebook,
 
 `./lab/KMeansClustering.ipynb`,
 
+two applications are shown:
 
+1. Customer segmentation, based on 4 features; a scatterplot of two features shows 5 clear clusters.
+2. Image compression.
 
+However, the notebook doesn't introduce anything new compared to the previous one.
+
+### 2.6 Gaussian Mixture Models (GMM)
+
+This section has no videos, just a reading. I summarize it here.
+
+[Gaussian Mixture Models (GMM)](https://towardsdatascience.com/gaussian-mixture-models-explained-6986aaf5a95) consists of `K` Gaussian blobs computed in clusters; we have one blob `i` for each detected cluster with three parameters:
+
+- the centroid (mean vectors: `mu_i`),
+- the density (covariance matrix: `sigma_i`),
+- and the mixing coefficient (`pi_i`), which is the weight of each blob (all weights add up to 1).
+
+Each blob tells us the probability of a point in the feature space of belonging to the blob-cluster. The model has a complete distribution, which is the *sum* of all blobs.
+
+![Gaussian Mixture Models: 1D](./pics/contreras_medium_gmm.png)
+
+When all parameters are computed, the PDF of the mixture model is formulated as:
+
+![GMM: PDF](./pics/gmm_pdf.jpg)
+
+That formula can be used for **anomaly detection**.
+
+While `p(x)` predicts the probability of a point belonging to any cluster, we can also obtain the probability of a point `x_n` of belonging to the cluster `i`: `p(i|x_n)`.
+
+![GMM: Probabilities](./pics/gmm_probabilities.png)
+
+The blobs are obtained with the **Expectation Maximization** algorithm, which iteratively finds the optimum parameters. Usually, an initial guess of the clusters is provided (e.g., provided via K-means), and then those blobs are optimized. The optimization works with the derivatives of the equations.
+
+#### Applications of the Gaussian Mixture Models
+
+- Recommender systems: by similar user clustering.
+- Anomaly detection: identification of data that are out of the general normal distribution.
+- Clustering.
+
+The main difference with K-means: 
+
+- K-means is a *hard* clustering algorithm: it says whether a point belongs to a cluster or not.
+- GMM is a *soft* clustering algorithm: it tells the probability of a point of belonging to different clusters.
+- It is more informative to have a probability, since we can decide to take different clusters for a point depending on the business case.
+
+#### Python Syntax
+
+We need to define
+
+- the number of blobs we'd like to detect: `n_components`,
+- and the type of covariance matrix: `covariance_type`:
+  - `full`: each component has its own general covariance matrix.
+  - `tied`: all components share the same general covariance matrix.
+  - `diag`: each component has its own diagonal covariance matrix.
+  - `spherical`: each component has its own single variance.
+
+Additionally, we can set `init_params`, which defines the initial clustering method; by default it's `kmeans`.
+
+```python
+from sklearn.mixture import GaussianMixture as GMM
+
+# covariance_type
+# full: each component has its own general covariance matrix.
+# tied: all components share the same general covariance matrix.
+# diag: each component has its own diagonal covariance matrix.
+# spherical: each component has its own single variance.
+gmm = GMM(n_components=3, covariance_type='tied', init_params='kmeans')
+gmm.fit(X)
+
+labels = gmm.predict(X)
+probs = GMM.predict_proba(X)
+```
 
 ## 3. Computational Difficulties of Clustering Algorithms: Distance Measures
 
