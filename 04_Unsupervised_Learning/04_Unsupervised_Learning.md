@@ -33,6 +33,7 @@ No guarantees
     - [2.6 Gaussian Mixture Models (GMM)](#26-gaussian-mixture-models-gmm)
       - [Applications of the Gaussian Mixture Models](#applications-of-the-gaussian-mixture-models)
       - [Python Syntax](#python-syntax)
+    - [2.7 Python Lab: Gaussian Mixture Models](#27-python-lab-gaussian-mixture-models)
   - [3. Computational Difficulties of Clustering Algorithms: Distance Measures](#3-computational-difficulties-of-clustering-algorithms-distance-measures)
     - [3.1 Cosine and Jaccard Distance](#31-cosine-and-jaccard-distance)
     - [3.2 Python Demo: Curse of Dimensionality](#32-python-demo-curse-of-dimensionality)
@@ -399,7 +400,7 @@ While `p(x)` predicts the probability of a point belonging to any cluster, we ca
 
 ![GMM: Probabilities](./pics/gmm_probabilities.png)
 
-The blobs are obtained with the **Expectation Maximization** algorithm, which iteratively finds the optimum parameters. Usually, an initial guess of the clusters is provided (e.g., provided via K-means), and then those blobs are optimized. The optimization works with the derivatives of the equations.
+The blobs are obtained with the [**Expectation Maximization**](https://en.wikipedia.org/wiki/Expectation–maximization_algorithm) algorithm, which iteratively finds the optimum parameters. Usually, an initial guess of the clusters is provided (e.g., provided via K-means), and then those blobs are optimized. The optimization works with the derivatives of the equations.
 
 #### Applications of the Gaussian Mixture Models
 
@@ -439,6 +440,187 @@ gmm.fit(X)
 
 labels = gmm.predict(X)
 probs = GMM.predict_proba(X)
+```
+
+### 2.7 Python Lab: Gaussian Mixture Models
+
+In this notebook,
+
+`./lab/GMM_v2.ipynb`,
+
+these examples are shown:
+
+1. Conceptual case with a univariate (1D) dataset; the case used in the reading.
+2. Conceptual case with a bivariate (2D) dataset; the case used in the reading. This is a nice example to see the difference between the different `covariance_type` classes. An interesting plotting function is defined.
+3. Image compression.
+4. Market segmentation.
+
+Nothing very new is learned, because the syntax is very similar to other clustering algorithms, e.g., K-means.
+
+Below, I add the 1D and 2D plotting functions and the code related to the market segmentation example, which are the most interesting parts.
+
+```python
+
+###
+### -- Plotting Functions
+###
+
+# This function will allow us to easily plot data taking in x values, y values, and a title
+def plot_univariate_mixture(means, stds, weights, N = 10000, seed=10):
+    
+    """
+    returns the simulated 1d dataset X, a figure, and the figure's ax
+    
+    """
+    np.random.seed(seed)
+    if not len(means)==len(stds)==len(weights):
+        raise Exception("Length of mean, std, and weights don't match.") 
+    K = len(means)
+    
+    mixture_idx = np.random.choice(K, size=N, replace=True, p=weights)
+    # generate N possible values of the mixture
+    X = np.fromiter((ss.norm.rvs(loc=means[i], scale=stds[i]) for i in mixture_idx), dtype=np.float64)
+      
+    # generate values on the x axis of the plot
+    xs = np.linspace(X.min(), X.max(), 300)
+    ps = np.zeros_like(xs)
+    
+    for mu, s, w in zip(means, stds, weights):
+        ps += ss.norm.pdf(xs, loc=mu, scale=s) * w
+    
+    fig, ax = plt.subplots()
+    ax.plot(xs, ps, label='pdf of the Gaussian mixture')
+    ax.set_xlabel("X", fontsize=15)
+    ax.set_ylabel("P", fontsize=15)
+    ax.set_title("Univariate Gaussian mixture", fontsize=15)
+    #plt.show()
+    
+    return X.reshape(-1,1), fig, ax
+    
+    
+def plot_bivariate_mixture(means, covs, weights, N = 10000, seed=10):
+    
+    """
+    returns the simulated 2d dataset X and a scatter plot is shown
+    
+    """
+    np.random.seed(seed)
+    if not len(mean)==len(covs)==len(weights):
+        raise Exception("Length of mean, std, and weights don't match.") 
+    K = len(means)
+    M = len(means[0])
+    
+    mixture_idx = np.random.choice(K, size=N, replace=True, p=weights)
+    
+    # generate N possible values of the mixture
+    X = np.fromiter(chain.from_iterable(multivariate_normal.rvs(mean=means[i], cov=covs[i]) for i in mixture_idx), 
+                dtype=float)
+    X.shape = N, M
+    
+    xs1 = X[:,0] 
+    xs2 = X[:,1]
+    
+    plt.scatter(xs1, xs2, label="data")
+    
+    L = len(means)
+    for l, pair in enumerate(means):
+        plt.scatter(pair[0], pair[1], color='red')
+        if l == L-1:
+            break
+    plt.scatter(pair[0], pair[1], color='red', label="mean")
+    
+    plt.xlabel("$x_1$")
+    plt.ylabel("$x_2$")
+    plt.title("Scatter plot of the bivariate Gaussian mixture")
+    plt.legend()
+    plt.show()
+    
+    return X
+
+
+def draw_ellipse(position, covariance, ax=None, **kwargs):
+    
+    """
+    Draw an ellipse with a given position and covariance
+    
+    """
+    ax = ax or plt.gca()
+    
+    # Convert covariance to principal axes
+    if covariance.shape == (2, 2):
+        U, s, Vt = np.linalg.svd(covariance)
+        angle = np.degrees(np.arctan2(U[1, 0], U[0, 0]))
+        width, height = 2 * np.sqrt(s)
+    else:
+        angle = 0
+        width, height = 2 * np.sqrt(covariance)
+    
+    # Draw the Ellipse
+    for nsig in range(1, 4):
+        ax.add_patch(Ellipse(position, nsig * width, nsig * height, angle, **kwargs))
+        
+        
+def plot_gmm(gmm, X, label=True, ax=None):
+    ax = ax or plt.gca()
+    labels = gmm.fit(X).predict(X)
+    if label:
+        ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+    else:
+        ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
+    ax.axis('equal')
+    
+    w_factor = 0.2 / gmm.weights_.max()
+    for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
+        draw_ellipse(pos, covar, alpha=w * w_factor)
+
+###
+### -- Market Segmentation
+###
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.mixture import GaussianMixture
+import matplotlib.pyplot as plt
+%matplotlib inline
+import seaborn as sns
+
+data = pd.read_csv("customers.csv")
+data.head()
+data.shape # (2216, 19)
+
+# Scale
+SS = StandardScaler()
+X = SS.fit(data).transform(data)
+
+# PCA: Reduce to 2D to plot
+pca2 = PCA(n_components=2)
+reduced_2_PCA = pca2.fit(X).transform(X)
+
+model = GaussianMixture(n_components=4, random_state=0)
+model.fit(reduced_2_PCA)
+PCA_2_pred = model.predict(reduced_2_PCA)
+
+# Plot
+x = reduced_2_PCA[:,0]
+y = reduced_2_PCA[:,1]
+plt.scatter(x, y, c=PCA_2_pred)
+plt.title("2d visualization of the clusters")
+plt.xlabel("PCA 1")
+plt.ylabel("PCA 2")
+
+# PCA with n=3 and clustering
+pca3 = PCA(n_components=3)
+reduced_3_PCA = pca3.fit(X).transform(X)
+mod = GaussianMixture(n_components=4, random_state=0)
+PCA_3_pred = mod.fit(reduced_3_PCA).predict(reduced_3_PCA)
+
+# 3D Plotting
+reduced_3_PCA = pd.DataFrame(reduced_3_PCA, columns=(['PCA 1', 'PCA 2', 'PCA 3']))
+fig = plt.figure(figsize=(10,8))
+ax = fig.add_subplot(111, projection="3d")
+ax.scatter(reduced_3_PCA['PCA 1'],reduced_3_PCA['PCA 2'],reduced_3_PCA['PCA 3'], c=PCA_3_pred)
+ax.set_title("3D projection of the clusters")
 ```
 
 ## 3. Computational Difficulties of Clustering Algorithms: Distance Measures
