@@ -50,6 +50,9 @@ No guarantees
     - [4.5 Mean Shift](#45-mean-shift)
       - [Discussion](#discussion-1)
       - [Python Syntax](#python-syntax-2)
+    - [4.6 Python Lab: Mean Shift](#46-python-lab-mean-shift)
+  - [5. Comparing Clustering Algorithms](#5-comparing-clustering-algorithms)
+    - [5.X Comparison Table](#5x-comparison-table)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -962,12 +965,11 @@ plt.rcParams['figure.figsize'] = plt.rcParamsDefault['figure.figsize']
 
 ```
 
-
 ### 4.5 Mean Shift
 
 The **Mean Shift** clustering algorithm is very similar to the K-Means algorithm, but the cluster centroid is not shifted to the center of mass, but to the point with highest local density. The algorithm ends when all points are assigned to a cluster.
 
-In order to measure the point with highest local density, a window is defined centered in each point; then, the weighted mean of the points within that window is measured to compute the new window center. Weighting occurs according to a kernel function which computes a weight based on the distance between the point in the window and the previous center. For point, the window wanders until a convergence point, called the **mode**. the process is repeated for every point in the dataset; at the end, all the points have a mode assigned - points with the same mode belong to the same cluster.
+In order to measure the point with highest local density, a **window** is defined centered in each point, implemented as the **standard deviation**; then, the weighted mean of the points within that window is measured to compute the new window center. Weighting occurs according to a kernel function which computes a weight based on the distance between the point in the window and the previous center. For point, the window wanders until a convergence point, called the **mode**. the process is repeated for every point in the dataset; at the end, all the points have a mode assigned - points with the same mode belong to the same cluster.
 
 ![Mean Shift: Algorithm](./pics/mean_shift_algorithm.jpg)
 
@@ -979,12 +981,14 @@ One common kernel for the weight computation is the RBF: Radial Basis Function, 
 
 ![Mean Shift: Weighted Mean, Kernel](./pics/mean_shift_weighted_mean.jpg)
 
+Note: the window is depicted as a square in the slides; I understand the shape depends on the underlying data structure used to access the neighboring points. For instance, it could be rather a circle/sphere/hypersphre.
+
 #### Discussion
 
 Strengths:
 
 - Model-free: no assumption on number or shape of clusters.
-- Only one parameter: window size or bandwidth.
+- Only one parameter: **window size or bandwidth; it is modeled as the standard deviation.**
 - Robust to outliers: outliers have their own clusters.
 
 Weaknesses:
@@ -1002,3 +1006,131 @@ ms.fit(X1)
 y_pred = ms.predict(X2)
 ```
 
+### 4.6 Python Lab: Mean Shift
+
+In this notebook,
+
+`./lab/Mean_Shift_Clustering_v2.ipynb`,
+
+three examples are shown:
+
+1. Image segmentation with color clustering.
+2. People clustering in the Titanic dataset.
+3. Notes and examples on how the Mean Shift algorithm works.
+
+In particular, the first examples seems very well suited for mean shift, even though nothing really new is shown here. Perhaps, it is interesting that `sklearn` has a bandwidth estimation algorithm, which comes handy.
+
+```python
+import numpy as np
+import cv2 as cv
+from sklearn.cluster import MeanShift, estimate_bandwidth
+from mpl_toolkits import mplot3d
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import math
+
+##
+## --- 1. Image segmentation with color clustering
+##
+
+# Load the image
+img = cv.imread('peppers.jpeg')
+plt.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
+
+# Smooth the image to make the segmentation easier
+img = cv.medianBlur(img, 7)
+plt.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
+
+# Show the 3D coordinates or the RGB pixels
+ax = plt.axes(projection ="3d")
+ax.scatter3D(img[:,:,0],img[:,:,1],img[:,:,2])
+ax.set_title('Pixel Values ')
+plt.show()
+
+# Reshape and convert to float: (194, 259, 3) -> (50246, 3)
+X = img.reshape((-1,3))
+X = np.float32(X)
+
+# Estimate the bandwidth, parameters:
+# - X: (n_samples, n_features)
+# - quantile: float, default=0.3 Should be between [0, 1]; 0.5 = median of all pairwise distances used.
+# - n_samples: int, number of samples to be used; if not given, all samples used.
+bandwidth = estimate_bandwidth(X, quantile=.06, n_samples=3000)
+
+# Mean Shift, parameters:
+# - max_itert: (default=300) maximum number of iterations per seed point, if not converged.
+# - bin_seeding :if True, initial kernel locations are not locations of all points, but rather the location of the discretized version of points.
+ms = MeanShift(bandwidth=bandwidth,bin_seeding=True)
+ms.fit(X)
+
+# Get labels for each data point
+labeled=ms.labels_
+# Predict clusters
+clusters=ms.predict(X)
+# In this case, clusters and labeled are the same
+sum(clusters-labeled) # 0
+
+# Get all unique clusters
+np.unique(labeled) # array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11])
+
+# Get cluster centers
+ms.cluster_centers_ # (12, 3) array
+# Convert to int
+cluster_int8=np.uint8(ms.cluster_centers_)
+
+# Plot cluster centers in 3D
+ax = plt.axes(projection ="3d")
+ax.set_title('Pixel Cluster Values  ')
+ax.scatter3D(cluster_int8[:,0],cluster_int8[:,1],cluster_int8[:,2],color='red')
+plt.show()
+
+# Draw the segmented image
+result=np.zeros(X.shape,dtype=np.uint8)
+for label in np.unique(labeled):
+    result[labeled==label,:]=cluster_int8[label,:]    
+result=result.reshape(img.shape)
+plt.imshow(cv.cvtColor(result, cv.COLOR_BGR2RGB))
+plt.show()
+
+
+##
+## --- 2. People clustering in the Titanic dataset
+##
+
+df = pd.read_csv("titanic.csv") # (891, 12)
+
+# Take features, replace values, impute, scale
+df = df.drop(columns=['Name','Ticket','Cabin','PassengerId','Embarked'])
+df.loc[df['Sex']!='male','Sex']=0
+df.loc[df['Sex']=='male','Sex']=1
+df['Age'].fillna(df['Age'].mean(),inplace=True)
+X = df.apply(lambda x: (x-x.mean())/(x.std()+0.0000001), axis=0)
+# Final dataset: all numerical, scaled, 
+X.shape # (891, 7)
+
+# Estimate bandwidth and apply Mean Shift
+bandwidth = estimate_bandwidth(X)
+ms = MeanShift(bandwidth=bandwidth , bin_seeding=True)
+ms.fit(X)
+
+# Append cluster prediction
+X['cluster']=ms.labels_
+df['cluster']=ms.labels_
+
+# Group by clusters and interpret
+# ...
+df.groupby('cluster').mean().sort_values(by=['Survived'], ascending=False)
+
+```
+
+
+## 5. Comparing Clustering Algorithms
+
+### 5.X Comparison Table
+
+Text
+
+|Algorithm 	  |Principle   	        |Parameters   	|Pros             	|Cons              	|
+|---	        |---	                |---	          |---	              |---	              |
+|K-Means      | Text               	|`a` <br> `b`                  	|- a <br> - b                  	|- a <br> - b                  	|
