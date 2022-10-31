@@ -52,7 +52,8 @@ No guarantees
       - [Python Syntax](#python-syntax-2)
     - [4.6 Python Lab: Mean Shift](#46-python-lab-mean-shift)
   - [5. Comparing Clustering Algorithms](#5-comparing-clustering-algorithms)
-    - [5.X Comparison Table](#5x-comparison-table)
+    - [5.1 Comparison Summary](#51-comparison-summary)
+    - [5.2 Python Lab: Clustering Algorithms](#52-python-lab-clustering-algorithms)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -74,7 +75,7 @@ Why would we want to decrease the dimensionality?
 In practice, high dimensions have many drawbacks and we talk about the *curse of dimensionality*:
 
 - With more features, the risk of having correlations between them increases, and that correlation might be only in the training set.
-- More features might introduce noise we need to learn to filter, otherwise we overfit
+- More features might introduce noise we need to learn to filter, otherwise we overfit.
 - Imagine KNN or any other distance based algorithm: with more dimensions, the number of data-points we need to cover the complete feature space increases exponentially; for a data point to get its proper nearest neighbors, we need many training points.
 - We need more computational power to train on datasets with high dimensionality.
 - Higher incidence of outliers.
@@ -1124,13 +1125,54 @@ df.groupby('cluster').mean().sort_values(by=['Survived'], ascending=False)
 
 ```
 
-
 ## 5. Comparing Clustering Algorithms
 
-### 5.X Comparison Table
+### 5.1 Comparison Summary
 
-Text
+Scikit-Learn has very nice articles in which different clustering algorithms are compared:
 
-|Algorithm 	  |Principle   	        |Parameters   	|Pros             	|Cons              	|
-|---	        |---	                |---	          |---	              |---	              |
-|K-Means      | Text               	|`a` <br> `b`                  	|- a <br> - b                  	|- a <br> - b                  	|
+- [Scikit-Learn Clustering](https://scikit-learn.org/stable/modules/clustering).
+- [Comparing different clustering algorithms on toy datasets](https://scikit-learn.org/stable/auto_examples/cluster/plot_cluster_comparison.html#sphx-glr-auto-examples-cluster-plot-cluster-comparison-py).
+
+As a summary, the following figure illustrates how each approach works on toy datasets, each with a particular challenging property:
+
+![Clustering Algorithms: Comparison](./pics/clustering_algorithms_comparison.jpg)
+
+Additionally, the following table summarizes the use-cases of each algorithm, as well as their parameters & Co.: 
+
+![Clustering Algorithms: Summary](./pics/clustering_algorithms_summary.jpg)
+
+Notes on each algorithm:
+
+- K-Means
+  - MiniBatch version is fast and works with big datasets.
+  - We need to know the number of clusters; if we don't know, we need to use the elbow method.
+  - It tends to work better with even-sized clusters.
+  - Does't work well with spherical shapes.
+- Mean Shift
+  - Slower.
+  - Many clusters are not a problem.
+  - Doesn't handle weird spherical shapes.
+  - Euclidean distance.
+- Hierarchical Agglomerative Clustering with Ward
+  - It makes sense to use it when we'd like to build a hierarchy in which clusters are within other clusters.
+  - Slow as dataset increases.
+- DBSCAN
+  - It seems it is the option to go, because it works very well in many situations, e.g., with weird dataset shapes.
+  - However, we need to find the correct values for `epsilon` and `n_clu`, which is not always easy.
+  - If the clusters have different densities, the algorithm doesn't work that well.
+
+### 5.2 Python Lab: Clustering Algorithms
+
+In this notebook,
+
+`./lab/04c_LAB_Clustering_Methods.ipynb`,
+
+the `Wine_Quality_Data.csv` dataset is used to perform clustering.
+
+It is a **very interesting notebook**, which could be used as a template for clustering problems. Additionally, 
+
+- clustering is explored as a method for **feature engineering**,
+- interesting compact pandas calls are performed creating frames with outputs.
+
+
