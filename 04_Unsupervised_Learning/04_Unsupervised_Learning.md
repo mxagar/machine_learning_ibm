@@ -1173,6 +1173,259 @@ the `Wine_Quality_Data.csv` dataset is used to perform clustering.
 It is a **very interesting notebook**, which could be used as a template for clustering problems. Additionally, 
 
 - clustering is explored as a method for **feature engineering**,
-- interesting compact pandas calls are performed creating frames with outputs.
+- and interesting compact pandas calls are performed creating frames with outputs.
 
+All in all the following steps are carried out:
 
+1. Load and inspect dataset
+2. Basic Feature Engineering
+3. Fitting K-Means with two clusters
+4. Elbow method for K-Means
+5. Hierarchical Agglomerative Clustering
+6. Clustering as Feature Engineering
+
+```python
+import seaborn as sns
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+data = pd.read_csv('Wine_Quality_Data.csv')
+
+##
+## --- 1. Load and inspect dataset
+##
+
+data.head(4).T
+data.shape # (6497, 13)
+data.info()
+data.color.value_counts()
+data.quality.value_counts().sort_index()
+
+## Wine (hue: red/white) quality histogram
+
+# seaborn styles
+sns.set_context('notebook')
+sns.set_style('white')
+# custom colors
+red = sns.color_palette()[2]
+white = sns.color_palette()[4]
+# set bins for histogram
+bin_range = np.array([3, 4, 5, 6, 7, 8, 9])
+# plot histogram of quality counts for red and white wines
+ax = plt.axes()
+for color, plot_color in zip(['red', 'white'], [red, white]):
+    q_data = data.loc[data.color==color, 'quality']
+    q_data.hist(bins=bin_range, 
+                alpha=0.5, ax=ax, 
+                color=plot_color, label=color)
+ax.legend()
+ax.set(xlabel='Quality', ylabel='Occurrence')
+# force tick labels to be in middle of region
+ax.set_xlim(3,10)
+ax.set_xticks(bin_range+0.5)
+ax.set_xticklabels(bin_range);
+ax.grid('off')
+
+float_columns = [x for x in data.columns if x not in ['color', 'quality']]
+
+## The correlation matrix
+
+corr_mat = data[float_columns].corr()
+# Strip out the diagonal values for the next step;
+# we want the highest correlation,
+# so the diagonal needs to be removed.
+for x in range(len(float_columns)):
+    corr_mat.iloc[x,x] = 0.0
+
+# Pairwise maximal correlations
+# For each variable, we get the most correlated variable
+# We could also get the maximum correlation with .max()
+# Recall that correlated variables affect the modeling
+# and high dimensionality favours high correlations.
+corr_mat.abs().idxmax()
+corr_mat.abs().max()
+
+##
+## --- 2. Basic Feature Engineering
+##
+
+## Correct skewness
+
+skew_columns = (data[float_columns]
+                .skew()
+                .sort_values(ascending=False))
+skew_columns = skew_columns.loc[skew_columns > 0.75]
+# Perform log transform on skewed columns
+for col in skew_columns.index.tolist():
+    data[col] = np.log1p(data[col])
+
+## Scale
+
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+data[float_columns] = sc.fit_transform(data[float_columns])
+
+## Paiplot: check if two clasters are visible
+
+sns.set_context('notebook')
+sns.pairplot(data[float_columns + ['color']], 
+             hue='color', 
+             hue_order=['white', 'red'],
+             palette={'red':'red', 'white':'gray'});
+
+##
+## --- 3. Fitting K-Means with two clusters
+##
+
+from sklearn.cluster import KMeans
+# We apply K-Means with a known number of clusters: 2
+km = KMeans(n_clusters=2, random_state=42)
+km = km.fit(data[float_columns])
+
+# We create a new column with the prediction
+data['kmeans'] = km.predict(data[float_columns])
+
+(data[['color','kmeans']]
+ .groupby(['kmeans','color'])
+ .size()
+ .to_frame()
+ .rename(columns={0:'number'}))
+# We can see that it did a quite nice job
+# in predicting the class!
+
+##
+## --- 4. Elbow method for K-Mean
+##
+
+# We apply K-Means without a known number of clusters,
+# i.e., we use the elbow method
+# Create and fit a range of models
+km_list = list()
+
+for clust in range(1,21):
+    km = KMeans(n_clusters=clust, random_state=42)
+    km = km.fit(data[float_columns])
+    
+    km_list.append(pd.Series({'clusters': clust, 
+                              'inertia': km.inertia_,
+                              'model': km}))
+
+plot_data = (pd.concat(km_list, axis=1)
+             .T
+             [['clusters','inertia']]
+             .set_index('clusters'))
+
+ax = plot_data.plot(marker='o',ls='-')
+ax.set_xticks(range(0,21,2))
+ax.set_xlim(0,21)
+ax.set(xlabel='Cluster', ylabel='Inertia');
+# We can see that the elbow would be around 4,
+# but it's not that clear...
+
+##
+## --- 5. Hierarchical Agglomerative Clustering
+##
+
+from sklearn.cluster import AgglomerativeClustering
+ag = AgglomerativeClustering(n_clusters=2, linkage='ward', compute_full_tree=True)
+ag = ag.fit(data[float_columns])
+data['agglom'] = ag.fit_predict(data[float_columns])
+
+# First, for Agglomerative Clustering:
+(data[['color','agglom','kmeans']]
+ .groupby(['color','agglom'])
+ .size()
+ .to_frame()
+ .rename(columns={0:'number'}))
+
+# Comparing with KMeans results:
+(data[['color','agglom','kmeans']]
+ .groupby(['color','kmeans'])
+ .size()
+ .to_frame()
+ .rename(columns={0:'number'}))
+
+ # First, we import the cluster hierarchy module from SciPy
+# (described above) to obtain the linkage and dendrogram functions.
+from scipy.cluster import hierarchy
+
+Z = hierarchy.linkage(ag.children_, method='ward')
+fig, ax = plt.subplots(figsize=(15,5))
+den = hierarchy.dendrogram(Z,
+                           orientation='top', 
+                           p=30, # how many levels down do you want to go?
+                           truncate_mode='lastp',
+                           show_leaf_counts=True,
+                           ax=ax)
+
+##
+## --- 6. Clustering as Feature Engineering
+##
+
+# - Create a **binary** target variable `y`, denoting if the quality is greater than 7 or not.
+# - Create a variable called `X_with_kmeans` from `data`, by dropping the columns "quality", "color" and "agglom" from the dataset. Create `X_without_kmeans` from that by dropping "kmeans".
+# - For both datasets, using **StratifiedShuffleSplit** with 10 splits, fit 10 Random Forest Classifiers and find the mean of the ROC-AUC scores from these 10 classifiers.
+# - Compare the average roc-auc scores for both models, the one using the KMeans cluster as a feature and the one that doesn't use it.
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.model_selection import StratifiedShuffleSplit
+
+y = (data['quality'] > 7).astype(int)
+X_with_kmeans = data.drop(['agglom', 'color', 'quality'], axis=1)
+X_without_kmeans = X_with_kmeans.drop('kmeans', axis=1)
+sss = StratifiedShuffleSplit(n_splits=10, random_state=6532)
+
+def get_avg_roc_10splits(estimator, X, y):
+    roc_auc_list = []
+    for train_index, test_index in sss.split(X, y):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+        estimator.fit(X_train, y_train)
+        y_predicted = estimator.predict(X_test)
+        y_scored = estimator.predict_proba(X_test)[:, 1]
+        roc_auc_list.append(roc_auc_score(y_test, y_scored))
+    return np.mean(roc_auc_list)
+# return classification_report(y_test, y_predicted)
+
+estimator = RandomForestClassifier()
+roc_with_kmeans = get_avg_roc_10splits(estimator, X_with_kmeans, y)
+roc_without_kmeans = get_avg_roc_10splits(estimator, X_without_kmeans, y)
+print("Without kmeans cluster as input to Random Forest, roc-auc is \"{0}\"".format(roc_without_kmeans))
+print("Using kmeans cluster as input to Random Forest, roc-auc is \"{0}\"".format(roc_with_kmeans))
+
+# Does it the number of clusters have an effect?
+# - Create the basis training set from `data` by restricting to float_columns.
+# - For $n = 1, \ldots, 20$, fit a KMeans algorithim with $n$ clusters. **[One-hot encode]()** it and add it to the **basis** training set. Don't add it to the previous iteration.
+# - Fit 10 **Logistic Regression** models and compute the average roc-auc-score.
+# - Plot the average roc-auc scores.
+
+from sklearn.linear_model import LogisticRegression
+
+X_basis = data[float_columns]
+sss = StratifiedShuffleSplit(n_splits=10, random_state=6532)
+
+def create_kmeans_columns(n):
+    km = KMeans(n_clusters=n)
+    km.fit(X_basis)
+    km_col = pd.Series(km.predict(X_basis))
+    km_cols = pd.get_dummies(km_col, prefix='kmeans_cluster')
+    return pd.concat([X_basis, km_cols], axis=1)
+
+estimator = LogisticRegression()
+ns = range(1, 21)
+roc_auc_list = [get_avg_roc_10splits(estimator, create_kmeans_columns(n), y)
+                for n in ns]
+
+ax = plt.axes()
+ax.plot(ns, roc_auc_list)
+ax.set(
+    xticklabels= ns,
+    xlabel='Number of clusters as features',
+    ylabel='Average ROC-AUC over 10 iterations',
+    title='KMeans + LogisticRegression'
+)
+ax.grid(True)
+
+```
