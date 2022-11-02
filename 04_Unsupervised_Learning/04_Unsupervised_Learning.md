@@ -54,6 +54,7 @@ No guarantees
   - [5. Comparing Clustering Algorithms](#5-comparing-clustering-algorithms)
     - [5.1 Comparison Summary](#51-comparison-summary)
     - [5.2 Python Lab: Clustering Algorithms](#52-python-lab-clustering-algorithms)
+  - [6. Dimensionality Reduction: Overview](#6-dimensionality-reduction-overview)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -1429,3 +1430,89 @@ ax.set(
 ax.grid(True)
 
 ```
+
+## 6. Dimensionality Reduction: Overview
+
+Recall the **curse of dimensionality**:
+
+- In higher dimensions, the space is filled more sparsely; or in other words, we need much more data to fill the entire feature space and learn the structure meaningfully.
+- In practice, more features lead to worse performance.
+- In higher dimensions the number of outliers increases.
+- In higher dimensions the distance measures perform worse.
+
+One solution to tackle the curse of dimensionality is to decrease it, by
+
+- selecting a subset of features
+- or applying linear and non-linear transformations that produce equivalent features in lower dimensional spaces.
+
+Example: phone usage and data usage.
+
+In the example, we see that the two features can be transformed to a linear combination of both that represents fairly well in 1D the dataset, i.e., maintaining as much variance as possible; that's the basic idea behind Principal Component Analysis (PCA).
+
+![Dimensionality Reduction: Example](./pics/dimensionality_reduction_example_1.jpg)
+
+![Dimensionality Reduction: Example](./pics/dimensionality_reduction_example_2.jpg)
+
+
+### 6.1 Principal Component Analysis (PCA)
+
+When we apply Principal Component Analysis (PCA), the axes/directions which account to the maximum variance in the feature space are discovered. With them, we form a new base in which the data points can be expressed; since it is a base, all directions are perpendicular to each other. The number of directions is the same as the number of features.
+
+With each direction/axis, we get a length or magnitude scalar, which accounts for the amount of variance in that direction. The idea is to take only the directions with the highest lengths, ignoring the rest, i.e., we **truncate the decomposition**; that is effectively as 
+
+- projecting the data points of the axes of highest variance
+- or basically dropping the components of the low variances axes.
+
+![Principal Component Analysis: PCA](./pics/pca.jpg)
+
+That base could be found with the **eigen values**: the directions are the eigenvectors and the variance values or lengths are the eigenvalues; however, the datset needs to be square to compute them. Instead, the **Singular Value Decomposition (SVD)** is used, which is a generalization of the former. With it, the dataset doesn't need to be square!
+
+We find a decomposition such as:
+
+`A_(mxn) = U_(mxm) * S_(mxn) * V^T_(nxn)`
+
+with:
+
+- `A` the original dataset consisting of `m` data points with `n` features each.
+- `U` a rotation matrix in `m-D` space.
+- `S`: a diagonal matrix which contains the **singular or principal values/components**, the lengths or variance values of the axes.
+- `V`: a rotation matrix in `n-D` space which contains the **principal axes** in its columns; note that the transpose is used in the formula, i.e., the axes are in the rows.
+
+![Singular Value Decomposition: SVD](./pics/svd.jpg)
+
+Note that when we truncate the directions with the least variance we reduce the axes and the features in the transformed space, but the dataset dimensions are maintained in the original feature base.
+
+Example: we go from `n -> k < n`:
+
+`A_(mxn) approx. U_(mxk) * S_(kxk) * V^T_(kxn)`
+
+Finally, note that scaling is fundamental before applying PCA; never apply PCA without scaling, specially if the features have ranges of different orders of magnitude!
+
+![PCA Scaling](./pics/pca_scaling.jpg)
+
+#### Python Syntax
+
+```python
+from sklearn.decomposition import PCA
+
+# Imagine our dataset has 20 features
+# and we want to reduce it to 3
+pca = PCA(n_components=3) # final number of components we want
+X_trans = pca.fit_transform(X_train)
+
+```
+
+### 6.2 Python Lab: Matrix Review
+
+Matrix operations review notebook: `./lab/Matrix_Review.ipynb`.
+
+Not interesting for me, very basic concepts reviewed.
+
+### 6.3 Python Lab: Dimensionality Reduction with PCA
+
+In this notebook,
+
+`./lab/04d_DEMO_Dimensionality_Reduction.ipynb`
+
+
+...
