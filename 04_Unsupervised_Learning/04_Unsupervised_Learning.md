@@ -61,6 +61,7 @@ No guarantees
     - [6.3 Python Lab: Dimensionality Reduction with PCA](#63-python-lab-dimensionality-reduction-with-pca)
     - [6.4 Python Lab: PCA Examples](#64-python-lab-pca-examples)
     - [6.5 Python Lab: SVD for Background Detection](#65-python-lab-svd-for-background-detection)
+    - [6.6 Dimensionality Reduction for Image Compression](#66-dimensionality-reduction-for-image-compression)
 
 ## 1. Introduction to Unsupervised Learning
 
