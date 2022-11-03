@@ -55,6 +55,12 @@ No guarantees
     - [5.1 Comparison Summary](#51-comparison-summary)
     - [5.2 Python Lab: Clustering Algorithms](#52-python-lab-clustering-algorithms)
   - [6. Dimensionality Reduction: Overview](#6-dimensionality-reduction-overview)
+    - [6.1 Principal Component Analysis (PCA)](#61-principal-component-analysis-pca)
+      - [Python Syntax](#python-syntax-3)
+    - [6.2 Python Lab: Matrix Review](#62-python-lab-matrix-review)
+    - [6.3 Python Lab: Dimensionality Reduction with PCA](#63-python-lab-dimensionality-reduction-with-pca)
+    - [6.4 Python Lab: PCA Examples](#64-python-lab-pca-examples)
+    - [6.5 Python Lab: SVD for Background Detection](#65-python-lab-svd-for-background-detection)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -1443,7 +1449,7 @@ Recall the **curse of dimensionality**:
 One solution to tackle the curse of dimensionality is to decrease it, by
 
 - selecting a subset of features
-- or applying linear and non-linear transformations that produce equivalent features in lower dimensional spaces.
+- or applying linear and non-linear transformations that produce equivalent features in lower dimensional spaces. **Indeed, if we apply the model on datasets that have been reduced with PCA, we can get better accuracies!**
 
 Example: phone usage and data usage.
 
@@ -1453,10 +1459,11 @@ In the example, we see that the two features can be transformed to a linear comb
 
 ![Dimensionality Reduction: Example](./pics/dimensionality_reduction_example_2.jpg)
 
+Note that applying PCA and truncating some of the components is like reducing the correlation between variables.
 
 ### 6.1 Principal Component Analysis (PCA)
 
-When we apply Principal Component Analysis (PCA), the axes/directions which account to the maximum variance in the feature space are discovered. With them, we form a new base in which the data points can be expressed; since it is a base, all directions are perpendicular to each other. The number of directions is the same as the number of features.
+When we apply Principal Component Analysis (PCA), **the axes/directions which account to the maximum variance in the feature space are discovered**. With them, we form a new base in which the data points can be expressed; since it is a base, all directions are perpendicular to each other. The number of directions is the same as the number of features. Also, note that **the features that form the directions of maximum variance are the ones with less correlation.**
 
 With each direction/axis, we get a length or magnitude scalar, which accounts for the amount of variance in that direction. The idea is to take only the directions with the highest lengths, ignoring the rest, i.e., we **truncate the decomposition**; that is effectively as 
 
@@ -1474,9 +1481,9 @@ We find a decomposition such as:
 with:
 
 - `A` the original dataset consisting of `m` data points with `n` features each.
-- `U` a rotation matrix in `m-D` space.
-- `S`: a diagonal matrix which contains the **singular or principal values/components**, the lengths or variance values of the axes.
-- `V`: a rotation matrix in `n-D` space which contains the **principal axes** in its columns; note that the transpose is used in the formula, i.e., the axes are in the rows.
+- `U` a rotation matrix in `m-D` space; it contains the *left* singular vectors or components in its columns.
+- `S`: a diagonal matrix which contains the **singular or principal values**, the lengths or variance values of the axes.
+- `V`: a rotation matrix in `n-D` space which contains the **principal axes** in its columns, aka. **components** or **right singular vectors**; note that the transpose is used in the formula, i.e., the axes are in the rows.
 
 ![Singular Value Decomposition: SVD](./pics/svd.jpg)
 
@@ -1486,7 +1493,22 @@ Example: we go from `n -> k < n`:
 
 `A_(mxn) approx. U_(mxk) * S_(kxk) * V^T_(kxn)`
 
-Finally, note that scaling is fundamental before applying PCA; never apply PCA without scaling, specially if the features have ranges of different orders of magnitude!
+**Important observations:** 
+
+- Even though we reduce the features to `k`, the elements of the `k` principal components will be *always* `n`, i.e., the number of features in the original dataset.
+- I have always considered that `n < m`, i.e., there are more samples than the original number of features. However, that's not always true, e.g., in the case of high resolution eigenfaces (see section 6.4). In the general case, the maximum value of `k` or `n_components` is `min(n_features=n, n_samples=m)`.
+- `S` is always diagonal; if it's not square, the rectangular part is full of zeros.
+- Similarly, if `S` is rectangular and its bottom part is full with zeros, `U`'s last columns will be also full of zeros; i.e., only the first `k` columns will have non-zero relevant values.
+- The singular values in `S` and their associated components are ordered from larger to smaller; the singular value is related to the variance explained along that principal axis.
+- When we take `k` components, we only take the first `k` columns/rows of `U`, `S` and `V`. If we multiply those matrices, we get an approximated value of `A`. In that approximation, the smallest variance components are removed, i.e., we get the information that gives shape/context to the data. That idea can be used to obtain the background image from a video sequence! See section 6.5.
+
+
+Finally, note that **scaling is fundamental before applying PCA**; never apply PCA without scaling, specially if the features have ranges of different orders of magnitude! The main reasons behind:
+
+- A feature with large values seems to have a higher variance than a feature with small values; instead, they all should be scaled to the same region to really check what's going on.
+- Large and small values are poorly handled together: the information of the small value is lost in the presence of the large, when summed.
+
+Note that `PCA()` has a parameter with which we can scale automatically: `whiten=True`.
 
 ![PCA Scaling](./pics/pca_scaling.jpg)
 
@@ -1499,6 +1521,15 @@ from sklearn.decomposition import PCA
 # and we want to reduce it to 3
 pca = PCA(n_components=3) # final number of components we want
 X_trans = pca.fit_transform(X_train)
+
+# We can get many information from pca
+# Principal axes in feature space: V^T, (n_components, features=X.shape[1])
+pca.components_
+# Variance ratio of each component
+pca.explained_variance_ratio_
+pca.explained_variance_ratio_.sum() # must be 1
+# Variance of each component
+pca.explained_variance_
 
 ```
 
@@ -1514,5 +1545,682 @@ In this notebook,
 
 `./lab/04d_DEMO_Dimensionality_Reduction.ipynb`
 
+two datasets are used to test PCA:
 
-...
+- The [Wholesale customers Dataset](https://archive.ics.uci.edu/ml/datasets/Wholesale+customers) 
+- and the [Human Activity Recognition with Smartphones Dataset](https://www.kaggle.com/datasets/uciml/human-activity-recognition-with-smartphones).
+
+**This is an interesting notebook, since it summarizes many things we can do with PCA**.
+
+The [Wholesale customers Dataset](https://archive.ics.uci.edu/ml/datasets/Wholesale+customers) refers to clients of a wholesale distributor. It includes the annual spending in monetary units (m.u.) on diverse product categories:
+
+- Fresh: annual spending (m.u.) on fresh products
+- Milk: annual spending (m.u.) on milk products
+- Grocery: annual spending (m.u.) on grocery products
+- Frozen: annual spending (m.u.) on frozen products
+- Detergents_Paper: annual spending (m.u.) on detergents and paper products
+- Delicatessen: annual spending (m.u.) on delicatessen products
+- Channel: customer channel (1: hotel/restaurant/cafe or 2: retail)
+- Region: customer region (1: Lisbon, 2: Porto, 3: Other)
+
+The [Human Activity Recognition with Smartphones Dataset](https://www.kaggle.com/datasets/uciml/human-activity-recognition-with-smartphones) collects 561+ time and frequency variables of healthy individuals which are mapped to the daily activity they were carrying out:
+
+- WALKING 
+- WALKING UPSTAIRS
+- WALKING DOWNSTAIRS
+- SITTING
+- STANDING
+- LAYING
+
+All in all, the following steps are carried out:
+
+1. Data Exploration and Processing
+    - Types are casted
+    - Unused columns dropped
+    - Skewed variables transformed
+2. PCA is Performed
+3. Feature Contributions Are Analyzed
+4. Grid Search is Explored with Non-Linear Dimensionality Reduction via Kernels
+5. Model Accuracy Change Depending on PCA
+
+```python
+import os
+
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
+import seaborn as sns
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+##
+## -- 1. Data Exploration and Processing
+## 
+
+data = pd.read_csv('Wholesale_Customers_Data.csv')
+data.shape # (440, 8)
+
+# We won't use Channel & Region
+data = data.drop(['Channel', 'Region'], axis=1)
+
+# The data is in monetary units, which are integers;
+# we convert the data to floats
+data.dtypes
+for col in data.columns:
+    data[col] = data[col].astype(np.float)
+
+# Preserve the original data
+data_orig = data.copy()
+
+# Correlation is important
+# if two variables are very correlated, probably removing
+# one doesn't reduce the total variance
+corr_mat = data.corr()
+
+# Strip the diagonal for future examination
+# because it has always the maximum value
+for x in range(corr_mat.shape[0]):
+    corr_mat.iloc[x,x] = 0.0
+    
+corr_mat.abs().idxmax()
+corr_mat.abs().max()
+
+# We need to transform the variables with large skew,
+# large starting at 0.75
+log_columns = data.skew().sort_values(ascending=False)
+log_columns = log_columns.loc[log_columns > 0.75]
+
+# The log transformations
+for col in log_columns.index:
+    data[col] = np.log1p(data[col])
+
+# Scale to [0,1]
+from sklearn.preprocessing import MinMaxScaler
+
+mms = MinMaxScaler()
+
+for col in data.columns:
+    data[col] = mms.fit_transform(data[[col]]).squeeze()
+
+# After all the transformations we've carried out
+# we should see normally distributed and clean data
+sns.set_context('notebook')
+sns.set_style('white')
+sns.pairplot(data)
+
+
+# A better way is using a Pipeline!
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.pipeline import Pipeline
+
+# To create a pipeline, we need to pass objects to it
+# with the functions `fit()` and `transform()`;
+# if a function we have used doesn't have that,
+# we can convert it to a transformer with
+# FunctionTransformer. We do that with
+# the custom NumPy log transformer
+log_transformer = FunctionTransformer(np.log1p)
+
+# The pipeline
+estimators = [('log1p', log_transformer), ('minmaxscale', MinMaxScaler())]
+pipeline = Pipeline(estimators)
+
+# Convert the original data
+data_pipe = pipeline.fit_transform(data_orig)
+
+##
+## -- 2. PCA is Performed
+## 
+
+from sklearn.decomposition import PCA
+
+pca_list = list()
+feature_weight_list = list()
+
+# Fit a range of PCA models
+
+for n in range(1, 7):
+    
+    # Create and fit the model
+    PCAmod = PCA(n_components=n)
+    PCAmod.fit(data)
+    
+    # Store the model and variance
+    pca_list.append(pd.Series({'n':n,
+                               'model':PCAmod,
+                               'var': PCAmod.explained_variance_ratio_.sum()}))
+    
+    # Calculate and store feature importances
+    # There is no such thing as feature importance
+    # but we can extract the components (the principal vectors)
+    # and compute the ratio brought by each feature into
+    # the vector direction.
+    # Recall: components_ is V^T, of size (n_components, features=6=X.shape[1])
+    # abs_feature_values: sum across rows, i.e., sum of all vectors
+    # Thus, the normalized abs_feature_values
+    # should contain the weight of each feature.
+    abs_feature_values = np.abs(PCAmod.components_).sum(axis=0)
+    feature_weight_list.append(pd.DataFrame({'n':n, 
+                                             'features':data.columns,
+                                             'values':abs_feature_values/abs_feature_values.sum()}))
+    
+pca_df = pd.concat(pca_list, axis=1).T.set_index('n')
+pca_df
+
+
+##
+## -- 3. Feature Contributions Are Analyzed
+## 
+
+features_df = (pd.concat(feature_weight_list)
+               .pivot(index='n', columns='features', values='values'))
+sns.heatmap(features_df, annot=True, cmap='Reds')
+
+sns.set_context('talk')
+ax = pca_df['var'].plot(kind='bar')
+ax.set(xlabel='Number of dimensions',
+       ylabel='Percent explained variance',
+       title='Explained Variance vs Dimensions');
+
+ax = features_df.plot(kind='bar', figsize=(13,8))
+ax.legend(loc='upper right')
+ax.set(xlabel='Number of dimensions',
+       ylabel='Relative importance',
+       title='Feature importance vs Dimensions')
+
+##
+## -- 4. Grid Search with Non-Linear Dimensionality Reduction via Kernels
+## 
+
+# In this example we use KernelPCA,
+# which is a non-linear dimensionality reduction
+# through the use of kernels.
+# The goal is to show how we can perform grid search to find the best
+# parameters.
+from sklearn.decomposition import KernelPCA
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import mean_squared_error
+
+# Custom scorer--use negative rmse of inverse transform
+# We want to find the best parameters for kernel PCA
+# We can use GridSearchCV,
+# but a custom scoring function needs to be defined.
+# The score is the oposite of the error,
+# so we compute the error between the original and the
+# inverse transformed dataset
+# and use its negative value
+def scorer(pcamodel, X, y=None):
+
+    try:
+        X_val = X.values
+    except:
+        X_val = X
+        
+    # Calculate and inverse transform the data
+    data_inv = pcamodel.fit(X_val).transform(X_val)
+    data_inv = pcamodel.inverse_transform(data_inv)
+    
+    # The error calculation
+    mse = mean_squared_error(data_inv.ravel(), X_val.ravel())
+    
+    # Larger values are better for scorers, so take negative value
+    return -1.0 * mse
+
+# The grid search parameters
+param_grid = {'gamma':[0.001, 0.01, 0.05, 0.1, 0.5, 1.0],
+              'n_components': [2, 3, 4]}
+
+# The grid search
+kernelPCA = GridSearchCV(KernelPCA(kernel='rbf', fit_inverse_transform=True),
+                         param_grid=param_grid,
+                         scoring=scorer,
+                         n_jobs=-1)
+
+
+kernelPCA = kernelPCA.fit(data)
+
+kernelPCA.best_estimator_
+
+##
+## -- 5. Model Accuracy Change Depending on PCA
+## 
+
+data = pd.read_csv('Human_Activity_Recognition_Using_Smartphones_Data.csv')
+
+# We have 562 columns:
+# y: 'Activity'
+# X: 561 time and frequency-related variables
+data.shape # (10299, 562)
+
+data.Activity.unique() # 'STANDING', 'SITTING', 'LAYING', 'WALKING', 'WALKING_DOWNSTAIRS', 'WALKING_UPSTAIRS'
+
+# Our goal is to build logistic regression models
+# with the (X,y) variables after having performed a PCA reduction.
+# Then, we see hoow the accuracy of the model varies
+# in function of the number of components used.
+# It makes sense to apply PCA here, because we have 
+# a lot of variables!
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+X = data.drop('Activity', axis=1)
+y = data.Activity
+sss = StratifiedShuffleSplit(n_splits=5, random_state=42)
+
+def get_avg_score(n):
+    pipe = [
+        ('scaler', StandardScaler()),
+        ('pca', PCA(n_components=n)),
+        ('estimator', LogisticRegression(solver='liblinear'))
+    ]
+    pipe = Pipeline(pipe)
+    scores = []
+    for train_index, test_index in sss.split(X, y):
+        X_train, X_test = X.loc[train_index], X.loc[test_index]
+        y_train, y_test = y.loc[train_index], y.loc[test_index]
+        pipe.fit(X_train, y_train)
+        scores.append(accuracy_score(y_test, pipe.predict(X_test)))
+    return np.mean(scores)
+
+
+ns = [10, 20, 50, 100, 150, 200, 300, 400]
+score_list = [get_avg_score(n) for n in ns]
+
+# We can see that with 100 variables (from 561)
+# we reach already +96% accuracy
+pd.DataFrame(score_list,index=ns)
+
+# We can see that with 100 variables (from 561)
+# we reach already +96% accuracy,
+# and the curve saturates
+sns.set_context('talk')
+ax = plt.axes()
+ax.plot(ns, score_list)
+ax.set(xlabel='Number of Dimensions',
+       ylabel='Average Accuracy',
+       title='LogisticRegression Accuracy vs Number of dimensions on the Human Activity Dataset')
+ax.grid(True)
+
+```
+
+### 6.4 Python Lab: PCA Examples
+
+In this notebook,
+
+`./lab/PCA.ipynb`
+
+several examples are analyzed:
+
+1. A synthetic dataset.
+2. Eigenfaces.
+3. Exercises with energy data.
+
+The second is interesting, the others don't provide new insights.
+
+The **Eigenfaces** example loads a dataset which contains 1288 face images of 50x37 pixels of 7 famous peole: 'Ariel Sharon', 'Colin Powell', 'Donald Rumsfeld', 'George W Bush', 'Gerhard Schroeder', 'Hugo Chavez', 'Tony Blair'.
+
+The goal is to be able to classify each image with its target name.
+
+Initially, SVC is used, but the results are really bad. However, after applying PCA to the dataset and keeping the first components that explain 95% of the variance, the results improve significantly. In other words: images are compressed and the classification becomes much better.
+
+The application of PCA works as follows:
+
+- Each image is vectorized to be a vector of `h*w` values; thus, we have `h*w` features or dimensions.
+- All vectors form the dataset: `X`: `(n_images, h*w)`.
+- We apply PCA to X.
+- We find the minimum number of components which yields an explained variance of 95%.
+- X is transformed with that number of components and SVC used on it.
+
+
+```python
+##
+## --- EIGENFACES
+##
+
+from tqdm import tqdm
+import numpy as np
+import pandas as pd
+from itertools import accumulate
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.datasets import fetch_lfw_people
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.svm import SVC
+from scipy.stats import loguniform
+
+def plot_explained_variance(pca):
+    # This function graphs the accumulated explained variance ratio for a fitted PCA object.
+    # Note:
+    # from itertools import accumulate
+    # accumulate([1,2,3,4,5]) --> 1 3 6 10 15
+    # i.e., p0, p0+p1, p0+p1+p2, ...
+    acc = [*accumulate(pca.explained_variance_ratio_)]
+    fig, ax = plt.subplots(1, figsize=(50, 20))
+    ax.stackplot(range(pca.n_components_), acc)
+    ax.scatter(range(pca.n_components_), acc, color='black')
+    ax.set_ylim(0, 1)
+    ax.set_xlim(0, pca.n_components_-1)
+    ax.tick_params(axis='both', labelsize=36)
+    ax.set_xlabel('N Components', fontsize=48)
+    ax.set_ylabel('Accumulated explained variance', fontsize=48)
+    plt.tight_layout()
+    plt.show()
+
+
+# Load dataset
+lfw_people = fetch_lfw_people(min_faces_per_person=70, resize=0.4)
+
+# Get the images arrays to find the shapes (for plotting)
+# lfw_people has
+# .images
+# .target
+# .target_names
+# .data: images in vector form: h*w
+# ...
+N, h, w = lfw_people.images.shape
+target_names = lfw_people.target_names
+
+print(N, h, w) # 1288 50 37
+
+y = lfw_people.target # target name for each image
+X = lfw_people.data # images in vector form
+n_features = X.shape[1] # number of vectorized pixels: h*w
+
+X.shape # (1288, 1850)
+
+# Each image has 50*37 pixels
+# which yield 1850 features or columns
+h*w # 1850
+
+# Plot the last image of each unique target
+for person in np.unique(lfw_people.target):
+    idx = np.argmax(lfw_people.target == person)
+    plt.imshow(lfw_people.images[idx], cmap='gray')
+    plt.title(lfw_people.target_names[person])
+    plt.show()
+
+# Train/Test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42
+)
+X_train.shape # (966, 1850)
+X_train.shape # (322, 1850)
+
+###
+### First Try: SVC with original features
+
+param_grid = {
+    "C": loguniform(1e3, 1e5),
+    "gamma": loguniform(1e-4, 1e-1)
+}
+clf = RandomizedSearchCV(
+    SVC(kernel="rbf", class_weight="balanced"), param_grid, n_iter=10
+)
+clf = clf.fit(X_train, y_train)
+
+y_pred = clf.predict(X_test)
+
+# We see all the images are being classified as George Bush.
+# Clearly it's having trouble differentiating between the faces.
+hmap = sns.heatmap(
+    confusion_matrix(y_test, y_pred),
+    annot=True,
+    xticklabels=lfw_people.target_names,
+    yticklabels=lfw_people.target_names,
+    fmt='g'
+)
+hmap.set_xlabel('Predicted Value')
+hmap.set_ylabel('Truth Value')
+
+###
+### Second Try: SVC with PCA components
+
+# If we don't pass n_components
+# either min(n_features, n_samples) is taken
+# or depending on the algorithm, another value is deduced.
+# Note that usually n_features < n_samples,
+# but not in this case, because we have more pixels per image
+# than images.
+# X_train is of shape (966, 1850)
+pca = PCA(svd_solver='full',  whiten=True).fit(X_train)
+pca.n_components_ # 966 = min(n_features=1850, n_samples=966)
+
+# Transform and inverse transform an image
+person_index=1
+Xhat=pca.transform(X[person_index,:].reshape(1, -1))
+# Both images should be very similar;
+# if n_components = n_features,
+# both images would be almost identical
+plt.imshow(pca.inverse_transform(Xhat).reshape(h, w), cmap='gray')
+plt.title("Image after PCA and inverse transform"  ) 
+plt.show()
+plt.imshow(lfw_people.images[person_index],cmap='gray')
+plt.title("Image")
+plt.show()
+
+# Plot explained variance in function of the number of components
+# It looks like 150 components explain over 95% of the variance,
+# usually 80% will do, let’s try and visualize some components.
+plot_explained_variance(pca)
+plt.show()
+
+# threshold: minimum variance we want to explain
+# which is the minimum number of components necessary?
+threshold = 0.60
+# cumsum sums for each element al the elements beforehand
+# components is of size
+components = np.cumsum(pca.explained_variance_ratio_) < threshold
+components.sum() # 7
+# Components has True until the accumulated explained variance is reached
+# then, False.
+# Its size is the number of original features
+components.shape # 966
+
+# Plot the pricipal components, i.e., the eigen-faces.
+# Important observation: even though we reduce the features to k=7,
+# the elements of the k principal components will be *always* n_features,
+# i.e., the number of features in the original dataset.
+# Thus, we can plot the eigen-faces or basic face patterns;
+# All the 1288 faces in the dataset are represented as a linear combination
+# of the eigen-faces after the PCA transformation.
+for component in pca.components_[components,:]:
+    plt.imshow(component.reshape(h, w),cmap='gray')
+    plt.show()
+
+# Perform PCA with n_components = 150
+# which explains more than 995%. of the variance
+pca = PCA(n_components=150, svd_solver="randomized", whiten=True).fit(X_train)
+
+X_train_pca = pca.transform(X_train)
+X_test_pca = pca.transform(X_test)
+
+# Plot transformed image again
+# This time, both are similar, but ifferences are visible
+person_index = 1
+
+plt.figure(figsize=(8, 4))
+plt.subplot(1,2,1)
+plt.imshow(lfw_people.images[person_index,:,:],cmap='gray')
+plt.title("Original image")
+
+plt.subplot(1,2,2)
+plt.imshow(pca.inverse_transform(pca.transform(X[person_index ,:].reshape(1, -1))).reshape(h, w),cmap='gray')
+plt.title("PCA transformed and inverse-transformed image ") 
+
+plt.tight_layout()
+plt.show()
+
+# Perform classification with transformed dataset
+# Take into account now we have a dataset with 150 features instead of 1850!
+# So images have been compressed.
+# Additionally, we have the 150 principal components
+# which are of size 1850 each.
+param_grid = {
+    "C": loguniform(1e3, 1e5),
+    "gamma": loguniform(1e-4, 1e-1),
+}
+clf = RandomizedSearchCV(
+    SVC(kernel="rbf", class_weight="balanced"), param_grid, n_iter=10
+)
+
+clf = clf.fit(X_train_pca, y_train)
+
+y_pred = clf.predict(X_test_pca)
+
+# The results now are much better,
+# with average precision=0.82 and recall=78
+print(classification_report(y_test,y_pred))
+
+hmap = sns.heatmap(
+    confusion_matrix(y_test, y_pred),
+    annot=True,
+    xticklabels=lfw_people.target_names,
+    yticklabels=lfw_people.target_names,
+    fmt='g'
+)
+hmap.set_xlabel('Predicted Value')
+hmap.set_ylabel('Truth Value')
+
+```
+
+### 6.5 Python Lab: SVD for Background Detection
+
+In this notebook,
+
+`./lab/SVD.ipynb`
+
+the [Background Subtraction Dataset](http://www.svcl.ucsd.edu/projects/bgsub/) from the Statistical Visual Computing Laboratory (SVCL) at UCSD is analyzed.
+
+**This is a very interesting notebook because it shows how to use SVD for image background modeling**.
+
+The code is very simple and self-explanatory:
+
+- 170 images of size 152x232 are loaded and flattened to form X of shape (170, 32654).
+- The images contain the same background and some objects/people appear in different locations in them; e.g., pedestrians.
+- The singular value decomposition of X is computed and the matrices are truncated to take only `k = 1` component.
+- The approximative `X` is computed with the truncated `k` components.
+- The first image of the approximate dataset is visualized: there are no pedestrians, just background!
+
+Note that the background is shown if we visualize any image from the approximate dataset. The explanation is that the first component or principal axis contains the background.
+
+I understand this could be applied to anything in which background noise needs to be removed; for instance, in audio!
+
+
+```python
+
+from os import listdir, getcwd
+from os.path import isfile, join
+from random import randint
+from PIL import Image
+
+import numpy as np 
+import pandas as pd
+import seaborn as sns 
+import matplotlib.pylab as plt
+%matplotlib inline
+
+from numpy.linalg import svd
+
+
+def get_data_matrix (mypath="peds"):
+    # Get all image filenames in mypath
+    cwd = getcwd()
+    mypath=join(cwd,mypath)
+    files = [ join(mypath,f) for f in listdir(mypath) if isfile(join(mypath, f)) and f.startswith(".")==False]
+    
+    # Read image
+    img = Image.open(files[0])
+    I=np.array(img)
+    
+    # Output sizes
+    Height,Width = I.shape
+   
+    # Output images
+    X=np.zeros((len(files),Height*Width))
+    for i,file in enumerate(files):
+        img = Image.open(file)
+        I=np.array(img)
+        # Flatten image: 2D array converted into 1D row vector
+        X[i,:]=I.reshape(1,-1)
+    return X,Height,Width
+
+# Get all images from any folder: peds, traffic, boats
+X, Height, Width = get_data_matrix(mypath="peds")
+
+# 170 flattened images: 152*232 = 35264
+X.shape, Height, Width # (170, 35264), 152, 232
+
+# Plot 5 random images from the set of 170
+for i in range(5):
+    frame=randint(0, X.shape[0]-1)
+    plt.imshow(X[randint(0, X.shape[0]-1),:].reshape(Height,Width),cmap="gray")
+    plt.title("frame: "+str(frame))
+    plt.show()
+
+# We decompose the dataset X in its singular value components
+# The flag full_matrices=False
+# removes the columns/rows from U & S which have zeros
+# The number of components will be min(n_features=35264, n_samples=170)
+U, s, VT = svd(X, full_matrices=False)
+
+U.shape # (170, 170)
+s.shape # (170,)
+VT.shape # (170, 35264)
+
+S = np.diag(s) # because s is an array
+
+# We take ONLY the first component, of all 170
+# @: matrix (dot) product
+k = 1
+Xhat = U[:,:k]@S[0:k,0:k]@VT[:k,:]
+
+# All images have been approximated
+Xhat.shape # (170, 35264)
+
+# We now plot the first image
+# from the approximated dataset
+# Only the background is shown!!
+plt.imshow(Xhat[0,:].reshape(Height,Width),cmap="gray")
+plt.title('Truncated SVD k=1')
+plt.show()
+```
+
+### 6.6 Dimensionality Reduction for Image Compression
+
+In this section an application of dimensionality reduction with PCA for image compression is shown.
+
+First, the image is divided in square regions of 12x12 pixels; then, each region is flattened to form a row in the image representation X, with shape `(n_squares, n_features=144)`.
+
+![PCA Image Compression](./pics/pca_image_compression.jpg)
+
+![PCA Image Compression: 12x12 Patches](./pics/pca_image_compression_2.jpg)
+
+Then, we apply PCA and we obtain the principal components ordered by the amount of variance they can explain. If we reshape the first principal components, we obtain the basis 12x12 patches; the image would be a linear combination of those patches!
+
+![PCA Image Compression: Principal Components](./pics/pca_image_compression_3.jpg)
+
+By using only the first `k` components (instead of the original 144), we can compress the image. Using `k=4` components implies taking
+
+- 4 vectors of length 144 (principal components)
+- and for each square/patch in the image, the weight of each of the 4 components.
+
+![PCA Image Compression: Principal Components](./pics/pca_image_compression_3.jpg)
+
+Of course, the representation error due to the compression decreases considerably if we increase the number of components `k`.
+
+![PCA Image Compression: Principal Components](./pics/pca_image_compression_error.jpg)
+
