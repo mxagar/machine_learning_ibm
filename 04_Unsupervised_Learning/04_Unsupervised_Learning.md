@@ -1438,7 +1438,7 @@ ax.grid(True)
 
 ```
 
-## 6. Dimensionality Reduction: Overview
+## 6. Dimensionality Reduction
 
 Recall the **curse of dimensionality**:
 
@@ -2225,3 +2225,77 @@ Of course, the representation error due to the compression decreases considerabl
 
 ![PCA Image Compression: Principal Components](./pics/pca_image_compression_error.jpg)
 
+
+## 7. Kernel Principal Component Analysis and Multidimensional Scaling
+
+PCA reduces the dimensionality of the dataset applying a linear transformation. However, we can also apply non-linear transformations. Examples:
+
+- Kernel PCA
+- Manifold learning or Multi-Dimensional Scaling: Isomap and T-SNE.
+
+**Kernel PCA** consists in using kernels for the data points as done in kernel-based SVM. It is very useful when the dataset has non-linear features. With those kernels we go to higher dimensional spaces, but we can uncover non-linear structures in those higher dimensional spaces and apply linear operations on them.
+
+In the example below, the dataset has two rings; the linear PCA would not detect meaningful structures to reduce the dimensions, although it is obvious there is a structure -- which is non-linear!
+
+![Kernel PCA](./pics/kernel_pca.jpg)
+
+**Manifold learning** techniques reduce the dimensionality of the dataset, but not by detecting the axes to preserve the maximum variance possible; instead, they try to maintain the distances between the datapoint pairs in the lower dimensional space. For instance, the following image is a dataset in which the points are in a sphere and it is simplified to a disk in which the points keep their relative distances.
+
+![Kernel PCA](./pics/mds.jpg)
+
+Another popular manifold learning technique is [T-SNE](); it is similar to PCA and it is often used for visualizing datasets in lower dimensional spaces. Data points that are close in higher dimensional spaces remain close in lower dimensional spaces.
+
+### Python Syntax
+
+```python
+from sklearn.decomposition import KernelPCA
+
+# we have several kernels with their parameters
+# rbf: Gaussian
+# gamma: parameter for the Guassian, how complex/curvy the boundary should be
+kpca = KernelPCA(n_components=3, kernel='rbf', gamma=1.0)
+X_kpca = kpca.fit_transform(X)
+
+### ---
+
+from sklearn.decomposition import MDS
+
+mds = MDS(n_components=2)
+X_mds = mds.fit_transform(X)
+
+
+### ---
+
+from sklearn.manifold import TSNE
+
+tsne = TSNE(n_components=2)
+X_tsne = tsne.fit_transform(X)
+
+```
+
+### 7.1 Python Lab: Kernel PCA
+
+This lab is in the notebook
+
+`./lab/04d_DEMO_Dimensionality_Reduction.ipynb`
+
+which is listed above, in Section 6.3.
+
+In that notebook, there is a very interesting section in which a Kernel PCA is applied with `GridSearchCV` to find the optimum parameters; since we have no target, the MSE between the transformed and the untransformed datasets is used as score.
+
+
+### 7.2 Python Lab: Kernel PCA
+
+In this notebook,
+
+`./lab/KernelPCA.ipynb`
+
+...
+
+### 7.3 Python Lab: Multi-Dimensional Scaling
+
+In this notebook,
+
+`./lab/Multi-Dimensional_Scaling.ipynb`
+
+...
