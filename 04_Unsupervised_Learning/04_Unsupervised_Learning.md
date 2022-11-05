@@ -2233,6 +2233,8 @@ PCA reduces the dimensionality of the dataset applying a linear transformation. 
 - Kernel PCA
 - Manifold learning or Multi-Dimensional Scaling: Isomap and T-SNE.
 
+### Kernel PCA
+
 **Kernel PCA** consists in using kernels for the data points, as done in kernel-based SVM. It is very useful when the dataset has non-linear features. With those kernels we map our dataset to higher dimensional spaces, and then apply linear PCA. That way, but we can uncover non-linear structures that seem linear in those higher dimensional spaces.
 
 In the example below, the dataset has two rings; the linear PCA would not detect meaningful structures to reduce the dimensions, although it is obvious there is a structure -- which is non-linear!
@@ -2262,9 +2264,31 @@ In practice, we have several Kernels we can use; a common one is the Radial Basi
 
 `k(xi,xj) = exp(-abs(xi-xj)^2/2*sigma^2)`
 
+### Multidimensional Scaling
+
 **Manifold learning** techniques reduce the dimensionality of the dataset, but not by detecting the axes to preserve the maximum variance possible; instead, they try to maintain the distances between the datapoint pairs in the lower dimensional space. For instance, the following image is a dataset in which the points are in a sphere and it is simplified to a disk in which the points keep their relative distances.
 
 ![Multi-Dimensional Scaling](./pics/mds.jpg)
+
+There are several methods for manifold learning. One of them is the **metric multi-dimensional scaling (MDS)**, which maps the `x` points to an embedding space `Z` (of lower dimension) in which the points are represented with the vectors `z`. Given a distance function `d()`, which can be any (that's the **advantage wrt. to PCA**), the distances between all pairs of points are computed in the following matrix:
+
+$$
+\begin{pmatrix}
+d\_{1,1} & d\_{1,2} & \cdots & d\_{1,N} \\\\\\
+d\_{2,1} & d\_{2,2} & \cdots & d\_{2,N} \\\\\\
+\vdots & \vdots & & \vdots \\\\\\
+d\_{N,1} & d\_{N,2} & \cdots & d\_{N,N}
+\end{pmatrix}.
+$$
+
+The mapping `x -> z` is achieved so that we minimize the *stress* function, which is the sum of all squared differences in distance values in each space:
+
+`min sum((d(x_i,x_j) - d(z_i,z_j))^2)`
+
+**Important note**: we can pass to `MDS` either
+
+- the dataset of points and the pairwise Euclidean distances are computed
+- or the matrix of distances between points (`dissimilarity='precomputed'`); we can use our choice of distance metric.
 
 Another popular manifold learning technique is [T-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding); it is similar to PCA and it is often used for visualizing datasets in lower dimensional spaces. Data points that are close in higher dimensional spaces remain close in lower dimensional spaces.
 
@@ -2282,7 +2306,9 @@ X_kpca = kpca.fit_transform(X)
 ### ---
 
 from sklearn.decomposition import MDS
-
+# We can pass the data points X
+# or also a distance matrix between all point pairs
+# Se examples below
 mds = MDS(n_components=2)
 X_mds = mds.fit_transform(X)
 
@@ -2371,4 +2397,122 @@ In this notebook,
 
 `./lab/Multi-Dimensional_Scaling.ipynb`
 
-...
+several examples are shown:
+
+1. Given a matrix with distances between cities in longitud-latitude space, `MDS` is applied to obtain approximate `long` and `lat` coordinates for the cities. The example doesn't work that well, but it's interesting to see that the distances in the 2D map are conserved. It is remarkable that we input the `d(x_i, x_j)` values and obtain the `z_i, z_j` coordinates.
+2. Dimensionality reduction is applied with `MDS` using different distance metrics on the digits dataset; then, we visualize the embedding. An example is shown with `TSNE`, too.
+
+In the following, the second example is summarized:
+
+```python
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
+
+import pandas as pd
+import numpy as np
+from scipy.spatial.distance import euclidean, cityblock, cosine
+import sklearn.metrics.pairwise
+import seaborn as sns
+# Import matplotlib for 3d plotting:
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import  MinMaxScaler
+from matplotlib import offsetbox
+# Make matplotlib work in jupyter notebook
+%matplotlib inline
+
+# Auxiliary function to plot the embedding
+def plot_embedding(X, title, ax):
+    X = MinMaxScaler().fit_transform(X)
+    for digit in digits.target_names:
+        ax.scatter(
+            *X[y == digit].T,
+            marker=f"${digit}$",
+            s=60,
+            color=plt.cm.Dark2(digit),
+            alpha=0.425,
+            zorder=2,
+        )
+    shown_images = np.array([[1.0, 1.0]])  # just something big
+    for i in range(X.shape[0]):
+        # plot every digit on the embedding
+        # show an annotation box for a group of digits
+        dist = np.sum((X[i] - shown_images) ** 2, 1)
+        if np.min(dist) < 4e-3:
+            # don't show points that are too close
+            continue
+        shown_images = np.concatenate([shown_images, [X[i]]], axis=0)
+        imagebox = offsetbox.AnnotationBbox(
+            offsetbox.OffsetImage(digits.images[i], cmap=plt.cm.gray_r), X[i]
+        )
+        imagebox.set(zorder=1)
+        ax.add_artist(imagebox)
+
+    ax.set_title(title)
+    ax.axis("off")
+
+## Load dataset
+from sklearn.datasets import load_digits
+
+digits = load_digits(n_class=6)
+X, y = digits.data, digits.target
+n_samples, n_features = X.shape
+
+print("samples:", n_samples, "features", n_features)
+# samples: 1083 features 64
+
+# Plot some digits
+fig, axs = plt.subplots(nrows=10, ncols=10, figsize=(6, 6))
+for idx, ax in enumerate(axs.ravel()):
+    ax.imshow(X[idx].reshape((8, 8)), cmap=plt.cm.binary)
+    ax.axis("off")
+_ = fig.suptitle("A selection from the 64-dimensional digits dataset", fontsize=16)
+
+# Create an MDS embedding
+# n_componenets: dimension of reduced embedding
+# dissimilarity: 'euclidean' (default) or 'precomputed'
+#   this is a very important argument
+#   if 'euclidean' (default), we pass a dataset of points
+#   and pairwise Euclidean distances between them are computed
+#   if 'precomputed', MSD expects a matrix of precomputed distances
+#   not data points; we can use any metric to compute those distances!
+embedding=MDS(n_components=2, n_init=1, max_iter=120, n_jobs=2)
+
+# Transform the digits to the embedding
+X_transformed=embedding.fit_transform(X)
+
+# Plot the embedding
+fig, ax = plt.subplots()
+plot_embedding(X_transformed, "Metric MDS ", ax)
+plt.show()
+
+# Now we pass the dissimilarity matrix instead of the initial dataset
+# and we use our distance metric of choice
+# Different embeddings are created.
+# As in the case of the cities, it is remarkable that we don't pass the initial dataset, but the matrix of distances,
+# and it works!
+from scipy.spatial.distance import squareform, pdist
+
+dist=['cosine','cityblock','hamming','jaccard','chebyshev','canberra','braycurtis']
+scaler = MinMaxScaler()
+X_norm=scaler.fit_transform(X)
+
+for d in dist:
+
+    # distance is a n_sample x n_sample matrix with distances between samples
+    distance=squareform(pdist(X_norm,metric=d))
+    print( d)
+
+    embedding =  MDS(dissimilarity='precomputed', random_state=0,n_components=2)
+    X_transformed = embedding.fit_transform(distance)
+    fig, ax = plt.subplots()
+    plot_embedding(X_transformed, "Metric MDS ", ax)
+    plt.show()
+
+
+# TSNE
+from sklearn.manifold import TSNE
+X_embedded = TSNE(n_components=2, init='random').fit_transform(X)
+fig, ax = plt.subplots()
+plot_embedding(X_embedded , "test", ax)
+plt.show()
+```
