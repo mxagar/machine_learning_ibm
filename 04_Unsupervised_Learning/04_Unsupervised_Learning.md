@@ -2233,17 +2233,40 @@ PCA reduces the dimensionality of the dataset applying a linear transformation. 
 - Kernel PCA
 - Manifold learning or Multi-Dimensional Scaling: Isomap and T-SNE.
 
-**Kernel PCA** consists in using kernels for the data points as done in kernel-based SVM. It is very useful when the dataset has non-linear features. With those kernels we go to higher dimensional spaces, but we can uncover non-linear structures in those higher dimensional spaces and apply linear operations on them.
+**Kernel PCA** consists in using kernels for the data points, as done in kernel-based SVM. It is very useful when the dataset has non-linear features. With those kernels we map our dataset to higher dimensional spaces, and then apply linear PCA. That way, but we can uncover non-linear structures that seem linear in those higher dimensional spaces.
 
 In the example below, the dataset has two rings; the linear PCA would not detect meaningful structures to reduce the dimensions, although it is obvious there is a structure -- which is non-linear!
 
 ![Kernel PCA](./pics/kernel_pca.jpg)
 
+Kernels are very useful when the mapping to higher dimensional spaces is difficult. As a result, no mapping needs to be calculated, we have the kernels.
+
+![Kernel PCA Mapping](./pics/kernel_pca_mapping.png)
+
+A transformation would be of the form:
+
+`phi: x = (x_1,x_2) -> x' = (x_1, x_2, x_1^2+x_2^2)`
+
+The polynomial Kernel computation would be:
+
+`k(xi,xj) = phi(xi)*phi(xj) = (xi*xj + c)^2`
+
+being `xi` and `xj` two samples from the dataset. We compute all pairwise kernels and build up the Gramm matrix; its eigenvalue factorization yields the principal components.
+
+Note that
+
+- a regular transformation has complexity `O(D^2)`, `D`: dimension (2 in this case)
+- a Kernel transformation has complexity `O(D)`
+
+In practice, we have several Kernels we can use; a common one is the Radial Basis Function (RBF) or Gaussian:
+
+`k(xi,xj) = exp(-abs(xi-xj)^2/2*sigma^2)`
+
 **Manifold learning** techniques reduce the dimensionality of the dataset, but not by detecting the axes to preserve the maximum variance possible; instead, they try to maintain the distances between the datapoint pairs in the lower dimensional space. For instance, the following image is a dataset in which the points are in a sphere and it is simplified to a disk in which the points keep their relative distances.
 
-![Kernel PCA](./pics/mds.jpg)
+![Multi-Dimensional Scaling](./pics/mds.jpg)
 
-Another popular manifold learning technique is [T-SNE](); it is similar to PCA and it is often used for visualizing datasets in lower dimensional spaces. Data points that are close in higher dimensional spaces remain close in lower dimensional spaces.
+Another popular manifold learning technique is [T-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding); it is similar to PCA and it is often used for visualizing datasets in lower dimensional spaces. Data points that are close in higher dimensional spaces remain close in lower dimensional spaces.
 
 ### Python Syntax
 
@@ -2252,7 +2275,7 @@ from sklearn.decomposition import KernelPCA
 
 # we have several kernels with their parameters
 # rbf: Gaussian
-# gamma: parameter for the Guassian, how complex/curvy the boundary should be
+# gamma: parameter for the Guassian (sigma), how complex/curvy the boundary should be
 kpca = KernelPCA(n_components=3, kernel='rbf', gamma=1.0)
 X_kpca = kpca.fit_transform(X)
 
@@ -2290,7 +2313,57 @@ In this notebook,
 
 `./lab/KernelPCA.ipynb`
 
-...
+several examples and comparisons between PCA and Kernel PCA are shown:
+
+1. A synthetic dataset consisting of two rings of points of different classes.
+2. A billionaires dataset.
+3. Image de-noising with PCA/Kernel-PCA of human digits.
+
+The insights are the following:
+
+- When non-linearities are clear in the dataset, Kernel-PCA performs much better: we can transform the dataset to perform classification and get better accuracy, simply because the data is represented in a more separable way.
+- PCA can be used to de-noise images: we compute the PCA transformation (with a desired number of components) and reconstruct the transformed images.
+
+Apart from that, few new things are shown.
+
+```python
+### USPS digits dataset: De-noising
+X_train_noisy = pd.read_csv('X_train_noisy.csv').to_numpy()
+X_test_noisy = pd.read_csv('X_test_noisy.csv').to_numpy()
+X_train_noisy.shape # (1000, 256)
+
+# Helper function for plotting the digit images
+def plot_digits(X, title):
+    """Small helper function to plot 100 digits."""
+    fig, axs = plt.subplots(nrows=10, ncols=10, figsize=(8, 8))
+    for img, ax in zip(X, axs.ravel()):
+        ax.imshow(img.reshape((16, 16)), cmap="Greys")
+        ax.axis("off")
+    fig.suptitle(title, fontsize=24)
+    
+plot_digits(X_test_noisy, "Noisy test images")
+
+# Comparing PCA and Kernel PCA
+# Note that we have 256 dimensions and 1000 samples
+# The automatic value for n_components is min(n_samples, n_features)
+# for the regular PCA; in this case that's n_features.
+# I understand that for the Kernel PCA default n_components is n_samples, because of the Kernel definitions and the Gramm matrix?
+# Note that n_components is different for both PCA and KernelPCA
+pca = PCA(n_components=35)
+pca.fit(X_train_noisy)
+kernel_pca = KernelPCA(n_components=400, kernel="rbf", gamma=0.01, fit_inverse_transform=True, alpha=0.1)
+kernel_pca.fit(X_train_noisy)
+
+# Reconstruct: PCA & KernelPCA were trained with the train split
+# but now the test split is transformed and reconstructed.
+X_hat_pca = pca.inverse_transform(pca.transform(X_test_noisy))
+X_hat_kpca = kernel_pca.inverse_transform(kernel_pca.transform(X_test_noisy))
+
+plot_digits(X_hat_pca, "Reconstructed Test Set (PCA)")
+
+plot_digits(X_hat_kpca, "Reconstructed Test Set (Kernel PCA)")
+
+```
 
 ### 7.3 Python Lab: Multi-Dimensional Scaling
 
