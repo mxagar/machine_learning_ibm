@@ -2400,7 +2400,7 @@ In this notebook,
 several examples are shown:
 
 1. Given a matrix with distances between cities in longitud-latitude space, `MDS` is applied to obtain approximate `long` and `lat` coordinates for the cities. The example doesn't work that well, but it's interesting to see that the distances in the 2D map are conserved. It is remarkable that we input the `d(x_i, x_j)` values and obtain the `z_i, z_j` coordinates.
-2. Dimensionality reduction is applied with `MDS` using different distance metrics on the digits dataset; then, we visualize the embedding. An example is shown with `TSNE`, too.
+2. Dimensionality reduction is applied with `MDS` using different distance metrics on the digits dataset; then, we visualize the embedding. As before, it is remarkable that we input the `d(x_i, x_j)` values and obtain the `z_i, z_j` coordinates. An example is shown with `TSNE`, too.
 
 In the following, the second example is summarized:
 
