@@ -2516,3 +2516,6 @@ fig, ax = plt.subplots()
 plot_embedding(X_embedded , "test", ax)
 plt.show()
 ```
+
+## 8. Non-Negative Matrix Factorization
+
