@@ -54,7 +54,7 @@ No guarantees
   - [5. Comparing Clustering Algorithms](#5-comparing-clustering-algorithms)
     - [5.1 Comparison Summary](#51-comparison-summary)
     - [5.2 Python Lab: Clustering Algorithms](#52-python-lab-clustering-algorithms)
-  - [6. Dimensionality Reduction: Overview](#6-dimensionality-reduction-overview)
+  - [6. Dimensionality Reduction](#6-dimensionality-reduction)
     - [6.1 Principal Component Analysis (PCA)](#61-principal-component-analysis-pca)
       - [Python Syntax](#python-syntax-3)
     - [6.2 Python Lab: Matrix Review](#62-python-lab-matrix-review)
@@ -62,6 +62,14 @@ No guarantees
     - [6.4 Python Lab: PCA Examples](#64-python-lab-pca-examples)
     - [6.5 Python Lab: SVD for Background Detection](#65-python-lab-svd-for-background-detection)
     - [6.6 Dimensionality Reduction for Image Compression](#66-dimensionality-reduction-for-image-compression)
+  - [7. Kernel Principal Component Analysis and Multidimensional Scaling](#7-kernel-principal-component-analysis-and-multidimensional-scaling)
+    - [Kernel PCA](#kernel-pca)
+    - [Multidimensional Scaling](#multidimensional-scaling)
+    - [Python Syntax](#python-syntax-4)
+    - [7.1 Python Lab: Kernel PCA](#71-python-lab-kernel-pca)
+    - [7.2 Python Lab: Kernel PCA](#72-python-lab-kernel-pca)
+    - [7.3 Python Lab: Multi-Dimensional Scaling](#73-python-lab-multi-dimensional-scaling)
+  - [8. Non-Negative Matrix Factorization](#8-non-negative-matrix-factorization)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -2518,4 +2526,283 @@ plt.show()
 ```
 
 ## 8. Non-Negative Matrix Factorization
+
+See my hand-written notes from the [Machine Learning Course by Andrew Ng](https://github.com/mxagar/machine_learning_coursera), summarized in the following PDF: [`Matrix_Factorization.pdf`](Matrix_Factorization.pdf).
+
+With the **non-negative matrix factorization (NNMF)** we decompose our original dataset matrix as a multiplication of other two lower rank matrices. Important characteristic: all matrices need to have only positive values.
+
+`V (m x u) = W (m x n) x H (n x u)`
+
+The original matrix `V` is decomposed into `W` and `H`, which approximate `V` with `V_hat`. Both `W` and `H` have a dimension `n` which refers to latent features that are discovered and which match the elements in dimensions `m` and `u`
+
+Examples:
+
+    Recommender System:
+        V (m x u): movies x users, estimated rating of movie by user
+        W (m x n): movies x detected **features**, feature weights of each movie
+        H (n x u): detected **features** x users, weight given by each user to each feature
+
+    Document Topic Identification:
+        V (m x u): documents x terms, frequency of term in document as TF-IDF
+        W (m x n): documents x detected **topics**, topic weights of each document
+        H (n x u): detected **topics** x terms, importance of each term in each topic
+
+Note that NNMF is similar to PCA/SVD in the sense that we approximate the original dataset with a matrix multiplication. However, there some important differences:
+
+- PCA/SVD works very well for dimensionality reduction, i.e., for compression.
+- NNMF works only with positive values, therefore the discovered latent features cannot be cancelled, i.e., they must be really important. In consequence, the obtained latent components represent positive and often more human interpretable elements in the dataset; e.g., if we apply NNMF to face images, each component represents the shades of eyes, nose, ears, etc.
+- If we truncate NNMF components, we lose more information, because the components are more informative.
+- NNMF doesn't provide with orthogonal latent vectors.
+
+![Non-Negative Matrix Factorization](./pics/nnmf_idea.jpg)
+
+### 8.1 Python Syntax
+
+```python
+from sklearn.decomposition import NMF
+
+# n_components: latent components to be identified, e.g., topics
+nmf = NMF(n_components=3, init='random')
+W = nmf.fit_transform(X) # (X.shape[0], n_components)
+H = nmf.components_ # (n_components, X.shape[1])
+# X approx. V = W@H
+```
+
+### 8.2 Summary of Dimensionality Reduction Approaches
+
+![Summary of Dimensionality Reduction Approaches](./pics/dimensionality_reduction_summary_approaches.jpg)
+
+- PCA: compress
+- Kernel PCA: compress for non-linear datasets
+- MDS: transform to lower dimensions preserving distance; visualization
+- NNMF: positive values, discover latent interpretable components
+
+### 8.3 NLP Feature Extraction
+
+This section is not present in the course videos, but references to it are done in the notebooks.
+
+I very briefly add how features can be extracted from texts.
+
+One common way of representing texts is using **bags of words**. Let's say we have a corpus of many documents of a similar type (e.g., articles, reviews, etc.); each document is a text. Then, we do the following:
+
+- We create tokenize (and maybe stem/lemmatize) all the words in the corpus.
+- We create a vocabulary with all the unique words.
+- We create a **document-term matrix (DTM)**, with
+    - rows: documents
+    - columns: tokens from vocabulary
+    - cell content: presence/count/frequency of word in document
+
+That DTM is our `X` and it can be used to perform supervised (e.g., classification, if we have document labels) or unsupervised learning (e.g., topic discovery).
+
+The cell contents can be 
+    
+1. word presence: whether a word appears (1) or not (0) in the document
+2. word count: how many times a word appears in the document
+3. word frequency: **term frequency inverse document frequency (TF-IDF)** values
+
+The first two options are realized with the [`CountVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html). The last one is the most interesting one and it is realized with the [`TfidfVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html#sklearn.feature_extraction.text.TfidfVectorizer). **Note that both have very important parameters, have a look at the documentation!**
+
+The **term frequency inverse document frequency (TF-IDF)** consists in multiplying the count of that term in the document by the how rare that term is throughout all the documents we are looking at. That way, common but meaningless words (e.g., 'the', 'of', etc.) have a lower value.
+
+#### Example
+
+Two documents:
+
+- *"We like dogs and cats"*
+- *"We like cars and planes"*
+
+`CountVectorizer()` yields:
+
+| doc | We | like | and | dogs | cats | cars | planes |
+| --- | -- | ---- | --- | ---- | ---- | ---- | ------ |
+| 0   | 1  | 1    | 1   | 1    | 1    | 0    | 0      |
+| 1   | 1  | 1    | 1   | 0    | 0    | 1    | 1      |
+
+`TfidfVectorizer()` yields:
+
+| doc | We | like | and | dogs   | cats   | cars   | planes |
+| --- | -- | ---- | --- | ------ | ------ | ------ | ------ |
+| 0   | 1  | 1    | 1   | 1.6931 | 1.6931 | 0      | 0      |
+| 1   | 1  | 1    | 1   | 0      | 0      | 1.6931 | 1.6931 |
+
+The TF-IDF matrix would contain the following values for each document `d` and term `t` cell:
+
+`idf(d,t) = ln((N/|d in D in which t in d|) + 1)`
+`tfidf(d,t) = C(d,t) * idf(d,t)`
+
+With:
+
+- `N`: total number of documents in the corpus, `|D|`
+- `|d in D in which t in d|`: number of documents in which the term `t` appears
+- `C(d,t)`: how many times the term `t` appears in document `d`
+
+### 8.4 Python Lab: NNMF for Text Topic Discovery
+
+In this notebook,
+
+`./lab/04e_DEMO_nmf.ipynb`
+
+The BBC dataset is analyzed with NNMF.
+
+The original files can be obtained [here](http://mlg.ucd.ie/files/datasets/bbc.zip), and they consist in:
+
+- `bbc/bbc.mtx`: sparse matrix with (wordID, articleID, number of times wordId appeared articleId)
+- `bbc/bbc.terms`: list of words/tokens in articles
+- `bbc/bbc.docs`: list of articles encoded as topic+id
+
+In the notebook, the sparse matrix in `bbc.mtx` is loaded and factorized into 5 topics; those 5 topics are then compared to the labels in `bbc.docs`.
+
+**It is a very interesting notebook**.
+
+Important links relate to the sparse matrices:
+
+- [https://docs.scipy.org/doc/scipy/reference/sparse.html](https://docs.scipy.org/doc/scipy/reference/sparse.html)
+- [https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html](https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html)
+
+
+```python
+import os
+import urllib
+import pandas as pd
+
+### --- Load dataset
+
+# bbc/bbc.terms: list of words
+# bbc/bbc.docs: list of articles encoded as topic+id
+# bbc/bbc.mtx: sparse matrix with (wordID, articleID, number of times wordId appeared articleId)
+with open('bbc/bbc.mtx') as r:
+    content = r.readlines()[2:]
+
+# All words/terms; position is index-1
+# Words are tokens that have some stemming
+with open('bbc/bbc.terms') as r:
+    words = r.readlines()
+len(words) # 9635
+# Remove final '\n' character
+words = [w.split()[0] for w in words]
+words[:5] # ['ad', 'sale', 'boost', 'time', 'warner']
+
+# All document topics; position is index-1
+with open('bbc/bbc.docs') as r:
+    docs = r.readlines()
+len(docs) # 2225
+# Remove final '\n' character
+# final index value is preserved, since it makes
+# document name unique
+docs = [d.split()[0] for d in docs]
+docs[:4] # ['business.001', 'business.002', 'business.003', 'business.004']
+
+# All topics, to be detected
+# we remove the index value and get just the topic,
+# with which we form a set
+set([d.split('.')[0] for d in docs]) # {'business', 'entertainment', 'politics', 'sport', 'tech'}
+
+### --- Process and prepare text features
+
+# We convert the sparse matrix list into alist of tuples
+# Important links:
+# https://docs.scipy.org/doc/scipy/reference/sparse.html
+# https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html
+sparsemat = [tuple(map(int,map(float,c.split()))) for c in content]
+# Let's examine the first few elements
+sparsemat[:8]
+# [(1, 1, 1),
+# (1, 7, 2),
+# (1, 11, 1),
+# (1, 14, 1),
+# (1, 15, 2),
+# (1, 19, 2),
+# (1, 21, 1),
+# (1, 29, 1)]
+
+import numpy as np
+from scipy.sparse import coo_matrix
+# Since words and docs indices start with 1
+# we need to substract 1!
+rows = [x[1]-1 for x in sparsemat] # article
+cols = [x[0]-1 for x in sparsemat] # words
+values = [x[2] for x in sparsemat] # word count in article
+# The sparse matrix is turned into an array
+# or better said, a sparse matrix in COOrdinate format.
+# Then, that object can be used by NMF or it can be transformed also into an array
+# https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html
+coo = coo_matrix((values, (rows, cols)))
+
+# Sparse representantion: (word, article, word count)
+len(sparsemat) # 286774
+
+# Sparse representation, but ready to be used
+# as sparse or to transform into array
+# Shape is the one of the array / expanded matrix: (articles, words)
+# and it contains the counts
+coo.shape # (2225, 9635)
+
+# With .toarray() we can convert the sparse matrix
+# into an expanded matrix.
+# We can assmble everything now
+# Now we can see why we want a sparse matrix:
+# the data frame is full of zeros!
+pd.DataFrame(data=coo.toarray(), columns=words, index=docs)
+
+### --- Factorization
+
+from sklearn.decomposition import NMF
+# We had 5 unique topics, so we set the components to that value
+model = NMF(n_components=5, init='random', random_state=818)
+# We pass the sparse matrix, not the expanded
+doc_topic = model.fit_transform(coo)
+
+# The output doc_topic is the fist decomposition matrix
+# we should have 2225 observations (articles) and five latent features
+doc_topic.shape # (2225, 5)
+
+# Find feature with highest topic-value per doc
+np.argmax(doc_topic, axis=1)
+
+# We can get the second decomposition matrix as follows
+# For each topic, the importance of each word
+# or vice versa: for each word, their important in each topic
+model.components_.shape # (5, 9635)
+
+### --- Analysis
+
+topic_word = pd.DataFrame(data=model.components_.round(3),
+                         columns=words,
+                         index=['topic_1','topic_2','topic_3','topic_4','topic_5'])
+topic_doc = pd.DataFrame(data=doc_topic.round(3),
+                         index=[d.split('.')[0] for d in docs],
+                         columns=['topic_1','topic_2','topic_3','topic_4','topic_5'])
+
+# The mapping from topic_x to the topic label
+topic_doc.reset_index().groupby('index').mean().idxmax()
+# topic_1         politics
+# topic_2         business
+# topic_3            sport
+# topic_4             tech
+# topic_5    entertainment
+
+# The most important 20 words for topic x
+topic_word.T.sort_values(by='topic_5', ascending=False).head(20)
+
+
+
+```
+
+### 8.5 Python Lab: NLP Feature Extraction
+
+In this notebook,
+
+`./lab/`
+
+...
+
+
+### 8.6 Python Lab: NMF for Image Decomposition
+
+In this notebook,
+
+`./lab/`
+
+...
+
 
