@@ -77,6 +77,7 @@ No guarantees
     - [8.4 Python Lab: NNMF for Text Topic Discovery](#84-python-lab-nnmf-for-text-topic-discovery)
     - [8.5 Python Lab: NLP Feature Extraction](#85-python-lab-nlp-feature-extraction)
     - [8.6 Python Lab: NMF for Image Decomposition](#86-python-lab-nmf-for-image-decomposition)
+  - [9. Project:](#9-project)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -3043,5 +3044,23 @@ dataset_index,query_index=threshold(similar_distance,max_=0.005,min_=0.00001)
 plot_data_query(dataset_index,query_index,5)
 
 ```
+
+## 9. Project
+
+### Requirements
+
+Print PDF with text, code not compulsory.
+
+- Section describing the dataset
+- Paragraph with objective of the analysis: clustering / dimensionality reduction; benefits for stakeholders?
+- Brief description of data processing: EDA, FE, etc.
+- Unsupervised learning model: why good? at least 3 variations (e.g., 3 clustering algorithms, 3 different hyperparameter sets)?
+- Key findings
+- Action plans to fix flaws, next steps
+
+### Repository
+
+- [nips_topic_identification](https://github.com/mxagar/nips_topic_identification)
+- [music_genre_classification](https://github.com/mxagar/music_genre_classification) `/ data_analysis / UnsupervisedLearning.ipynb`
 
 
