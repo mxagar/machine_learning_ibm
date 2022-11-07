@@ -70,6 +70,13 @@ No guarantees
     - [7.2 Python Lab: Kernel PCA](#72-python-lab-kernel-pca)
     - [7.3 Python Lab: Multi-Dimensional Scaling](#73-python-lab-multi-dimensional-scaling)
   - [8. Non-Negative Matrix Factorization](#8-non-negative-matrix-factorization)
+    - [8.1 Python Syntax](#81-python-syntax)
+    - [8.2 Summary of Dimensionality Reduction Approaches](#82-summary-of-dimensionality-reduction-approaches)
+    - [8.3 NLP Feature Extraction](#83-nlp-feature-extraction)
+      - [Example](#example)
+    - [8.4 Python Lab: NNMF for Text Topic Discovery](#84-python-lab-nnmf-for-text-topic-discovery)
+    - [8.5 Python Lab: NLP Feature Extraction](#85-python-lab-nlp-feature-extraction)
+    - [8.6 Python Lab: NMF for Image Decomposition](#86-python-lab-nmf-for-image-decomposition)
 
 ## 1. Introduction to Unsupervised Learning
 
@@ -2533,7 +2540,7 @@ With the **non-negative matrix factorization (NNMF)** we decompose our original 
 
 `V (m x u) = W (m x n) x H (n x u)`
 
-The original matrix `V` is decomposed into `W` and `H`, which approximate `V` with `V_hat`. Both `W` and `H` have a dimension `n` which refers to latent features that are discovered and which match the elements in dimensions `m` and `u`
+The original matrix `V` is decomposed into `W` and `H`, which approximate `V` with `V_hat`. Both `W` and `H` have a dimension `n` which refers to latent or basis features that are discovered and which match the elements in dimensions `m` and `u`. The matrix `H` contains the basis vectors or components in its rows.
 
 Examples:
 
@@ -2550,9 +2557,10 @@ Examples:
 Note that NNMF is similar to PCA/SVD in the sense that we approximate the original dataset with a matrix multiplication. However, there some important differences:
 
 - PCA/SVD works very well for dimensionality reduction, i.e., for compression.
-- NNMF works only with positive values, therefore the discovered latent features cannot be cancelled, i.e., they must be really important. In consequence, the obtained latent components represent positive and often more human interpretable elements in the dataset; e.g., if we apply NNMF to face images, each component represents the shades of eyes, nose, ears, etc.
+- PCA/SVD is suited for datasets that have negative values.
+- NNMF works only with positive values, therefore the discovered latent features or basis components cannot be cancelled, i.e., they must be really important. In consequence, the obtained latent components represent positive and often more human interpretable elements in the dataset; e.g., if we apply NNMF to face images, each component represents the shades of eyes, nose, ears, etc.
 - If we truncate NNMF components, we lose more information, because the components are more informative.
-- NNMF doesn't provide with orthogonal latent vectors.
+- NNMF doesn't provide with orthogonal latent vectors, as PCA/SVD does.
 
 ![Non-Negative Matrix Factorization](./pics/nnmf_idea.jpg)
 
@@ -2563,8 +2571,11 @@ from sklearn.decomposition import NMF
 
 # n_components: latent components to be identified, e.g., topics
 nmf = NMF(n_components=3, init='random')
-W = nmf.fit_transform(X) # (X.shape[0], n_components)
-H = nmf.components_ # (n_components, X.shape[1])
+# The transformed data points: they are represented in the new basis,
+# for each data point, we get the positive weight of each basis component
+W = nmf.fit_transform(X) # (X.shape[0]=n_samples, n_components)
+# The new basis with n_components intepretable vectors
+H = nmf.components_ # (n_components, X.shape[1]=n_features)
 # X approx. V = W@H
 ```
 
@@ -2618,7 +2629,7 @@ Two documents:
 | 0   | 1  | 1    | 1   | 1    | 1    | 0    | 0      |
 | 1   | 1  | 1    | 1   | 0    | 0    | 1    | 1      |
 
-`TfidfVectorizer()` yields:
+`TfidfVectorizer()` would yield:
 
 | doc | We | like | and | dogs   | cats   | cars   | planes |
 | --- | -- | ---- | --- | ------ | ------ | ------ | ------ |
@@ -2635,6 +2646,8 @@ With:
 - `N`: total number of documents in the corpus, `|D|`
 - `|d in D in which t in d|`: number of documents in which the term `t` appears
 - `C(d,t)`: how many times the term `t` appears in document `d`
+
+However, note that `TfidfVectorizer()` addiitonally normalizes each row to have length 1.
 
 ### 8.4 Python Lab: NNMF for Text Topic Discovery
 
@@ -2792,17 +2805,243 @@ topic_word.T.sort_values(by='topic_5', ascending=False).head(20)
 
 In this notebook,
 
-`./lab/`
+`./lab/tfidf-lab.jupyterlite.ipynb`
 
-...
+Document-Term matrices or frequency matrices are built from texts using [`CountVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html) and [`TfidfVectorizer`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html#sklearn.feature_extraction.text.TfidfVectorizer).
 
+It is a nice notebook which shows how to extract features from a corpus of documents.
+
+```python
+import re
+import pandas as pd
+import numpy as np
+import sklearn
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+
+# We take only th etext column, but there are some other columns, too:
+# id, topic
+df = pd.read_csv('tfidf.csv').iloc[:,1]
+df.head(5)
+# 0    Personally I have no idea what my IQ is. I’ve ...
+# 1    I'm skeptical. A heavier lid would be needed t...
+# ...
+
+# Custom text processing function
+def preprocess_text(text):
+    text = text.lower()
+    # Remove all digits 
+    text = re.sub(r'\d+', '', text)
+    return text
+
+# Create the DTM or frequency matrix with count values
+# max_features: top features taken, according to their frequency in corpus
+# preprocessor: we can pass any custom function we'd like
+cv = CountVectorizer(max_features = 500, preprocessor = preprocess_text)
+tf_mat = cv.fit_transform(df)
+# CountVectorizer.get_feature_names_out(): terms/tokens
+tf = pd.DataFrame(tf_mat.toarray(), columns = cv.get_feature_names_out())
+# 1586 rows × 500 columns
+
+# TF-IDF: we pass the matrix of the CountVectorizer
+tfidf_trans = TfidfTransformer()
+tfidf_mat = tfidf_trans.fit_transform(tf)
+# Convert to a dataframe
+# TfidfTransformer normalizes each row to length 1
+tfidf = pd.DataFrame(tfidf_mat.toarray(), columns = cv.get_feature_names_out())
+# 1586 rows × 500 columns
+
+# TfidfTransformer normalizes each row to length 1
+# We can manually get the original
+# or non-normalized TF-IDF as follows
+pd.DataFrame(tfidf_trans.idf_ * tf.to_numpy(), columns = tfidf_trans.get_feature_names_out())
+
+# Transform a sparse DTM into a stacked object
+dense_tfidf = tfidf.stack()
+# Visualize the non-zero values of the stacked object
+# This is a denser representation
+dense_tfidf[dense_tfidf != 0]
+
+dense_tfidf.shape # (793000,)
+# Number stacked entries = number DTM cells
+tfidf.shape[0]*tfidf.shape[1] # 793000
+
+# Undo the stacking
+dense_tfidf.unstack()
+```
 
 ### 8.6 Python Lab: NMF for Image Decomposition
 
 In this notebook,
 
-`./lab/`
+`./lab/Non-Negative_Matrix_Factorization.ipynb`
 
-...
+the [Anime Face Dataset](https://www.kaggle.com/datasets/splcher/animefacedataset) is analyzed.
+
+The motivation is to find the most similar face pairs; additionally, the algorithm needs to be interpretable. NNMF is good at that: faces are decomposed into interpretable components that are summed.
+
+I think this is a very interesting application, since similar faces are found (although they're not that similar). However, few new things are shown really.
+
+In the following, I summarize the most interesting parts of the code.
+
+```python
+import os 
+from os import listdir,getcwd
+from os.path import isfile, join
+from PIL import Image, ImageOps
+
+import numpy as np
+import pandas as pd
+from numpy.random import RandomState
+import matplotlib.pyplot as plt
+
+from sklearn.decomposition import NMF
+
+### --- Auxiliary Functions
+
+# Load dataset
+def get_data_matrix(test=False, Length=100, Width=100, mypath="images/"):
+    # All filenames
+    files = [join(mypath,f) for f in listdir(mypath) if isfile(join(mypath, f)) and f[0] != '.']
+    if mypath + '/.DS_Store' in files:
+        files.remove(mypath + '/.DS_Store')
+  
+    if test:
+        print("test data")
+        files=files[9000:10000]
+        
+    else:
+        print("training data")
+        files=files[0:9000]
+        
+    print(len(files))
+    X=np.zeros((len(files), Length*Width))
+    for i, file in enumerate(files):
+        # Open image and resize
+        img = Image.open(file).resize((Width, Length))
+        # Convert to grayscale
+        img =  ImageOps.grayscale(img)
+        # Reshape to be one row of shape (1,Length*Width=10000)
+        I=np.array(img)
+        X[i,:]=I.reshape(1,-1)
+    return X
+
+# Reshape and plot
+def reshape_row(x) :
+    plt.imshow(x.reshape(Length,Width),cmap="gray")
+
+# Output index if min_ < similar_distance < max_
+def threshold(similar_distance, max_=0.1, min_=0):
+    dataset_index = np.where(np.logical_and(similar_distance>min_, similar_distance<max_))[0]
+    query_index=similar_index[np.logical_and(similar_distance>min_, similar_distance<max_)]
+    return dataset_index, query_index
+
+# Plot dataset images and query images, 
+# X and X_q are global variables
+def plot_data_query(dataset_index, query_index, N):
+    for data_sample, query_sample in zip(dataset_index[0:N],query_index[0:N]):
+
+        plt.figure(figsize=(10,4))
+        plt.subplot(1,2,1)
+        reshape_row(X[data_sample])
+        plt.title("dataset sample {}".format(data_sample))
+        plt.subplot(1,2,2)
+        reshape_row(X_q[query_sample])
+        plt.title("query sample match {}".format(query_sample))
+        plt.show()
+
+        print("-----------------------------------------------------")
+
+### --- Load Dataset
+
+Length, Width = 100, 100
+X = get_data_matrix(test=False, Length=Length, Width=Width, mypath="images")
+X.shape # (9000, 10000)
+
+### --- Non-Negative Matrix Factorization
+
+# Number of components in the basis
+n_components = 10
+nmf_estimator = NMF(n_components=n_components, tol=5e-3, max_iter=2000)
+nmf_estimator.fit(X)  # original non- negative dataset
+
+# Components / Basis
+H = nmf_estimator.components_
+# Transform all the images to the new basis
+# For each image, we get the weight of each component
+W = nmf_estimator.transform(X)
+W.shape # (9000, 10)
+
+# Plot components
+plt.figure(figsize=(25, 8))
+for i,h in enumerate(H):   
+    plt.subplot(2, 5, i+1)
+    reshape_row(h)
+    plt.title("basis images {}".format(str(i+1)), fontsize=20) 
+    
+plt.tight_layout()
+
+# Get the component weights of an image i
+i = 0
+w = W[i,:]
+# The encoding tells you the projection of each image in X on a particular basis
+# component 2 has a large weight, whereas component 9 has weight 0.0
+plt.bar([n+1 for n in range(len(w))],w)
+plt.title("encodings for image {} ".format (i+1))
+
+# Inverse transform: approximated images
+Xhat = nmf_estimator.inverse_transform(W)
+
+plt.figure(figsize=(20,8))
+# Plot original image and approximated image
+for i in range(1,5):
+    plt.subplot(2,4,i)
+    reshape_row(X[i])
+    plt.title(f"Original image {i}")
+    
+    plt.subplot(2,4,i+4)
+    reshape_row(Xhat[i])
+    plt.title(f"Approximated image {i}")
+
+### --- Image Retrieval
+
+X_q = get_data_matrix(test=True,Length=100,Width=100,mypath="images")
+X_q.shape # (1000, 10000)
+
+W_q = nmf_estimator.transform(X_q)
+W_q.shape # (1000, 10)
+
+from sklearn.metrics import pairwise_distances
+
+# calculates the pairwise distance between the NNMF encoded version of 
+# the original dataset W and the encoded version of the query dataset W_q
+D = pairwise_distances(W,W_q,metric='cosine')
+
+D.shape # (9000, 1000)
+
+similar_index = np.argmin(D, axis=1)
+similar_index.shape # (9000,)
+
+similar_distance = np.min(D, axis=1)
+similar_distance.shape # (9000,)
+
+plt.hist(similar_distance, bins=100)
+plt.title("Distance values")
+
+# get images that are close within a tolerance
+dataset_index, query_index = threshold(similar_distance, max_=0.00001, min_=0)
+
+dataset_index.shape, query_index.shape
+# ((49,), (49,))
+
+dataset_index[:10]
+# array([ 102,  165,  332,  498,  936, 1141, 1183, 1322, 1673, 1714])
+query_index[:10]
+# array([410, 584, 196, 948, 143,  57, 762, 432, 527, 434])
+
+# Plot similar images: train (dataset) vs test (query)
+dataset_index,query_index=threshold(similar_distance,max_=0.005,min_=0.00001)
+plot_data_query(dataset_index,query_index,5)
+
+```
 
 
