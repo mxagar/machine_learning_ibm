@@ -931,7 +931,7 @@ from sklearn.cluster import DBSCAN
 db = DBSCAN(eps=3,
             min_samples=3)
 
-df.fit(X)
+db.fit(X)
 # You cannot call predict,
 # instead, you get the clusters for the current dataset 
 # labels: -1, 0, 1, 2, ...
@@ -1090,9 +1090,9 @@ ms = MeanShift(bandwidth=bandwidth,bin_seeding=True)
 ms.fit(X)
 
 # Get labels for each data point
-labeled=ms.labels_
+labeled = ms.labels_
 # Predict clusters
-clusters=ms.predict(X)
+clusters = ms.predict(X)
 # In this case, clusters and labeled are the same
 sum(clusters-labeled) # 0
 
@@ -1534,10 +1534,12 @@ Note that `PCA()` has a parameter with which we can scale automatically: `whiten
 ```python
 from sklearn.decomposition import PCA
 
-# Imagine our dataset has 20 features
-# and we want to reduce it to 3
+# Imagine our dataset has n=20 features and m>n samples
+# and we want to reduce it to k=3 features; we apply PCA/SVD:
+# X_(mxn) = U_(mxm) * S_(mxn) * V^T_(nxn)
+# X_hat_(mxn) = U_(mxk) * S_(kxk) * V^T_(kxn)
 pca = PCA(n_components=3) # final number of components we want
-X_trans = pca.fit_transform(X_train)
+X_hat = pca.fit_transform(X)
 
 # We can get many information from pca
 # Principal axes in feature space: V^T, (n_components, features=X.shape[1])
@@ -2597,7 +2599,7 @@ I very briefly add how features can be extracted from texts.
 
 One common way of representing texts is using **bags of words**. Let's say we have a corpus of many documents of a similar type (e.g., articles, reviews, etc.); each document is a text. Then, we do the following:
 
-- We create tokenize (and maybe stem/lemmatize) all the words in the corpus.
+- We tokenize (and maybe stem/lemmatize) all the words in the corpus.
 - We create a vocabulary with all the unique words.
 - We create a **document-term matrix (DTM)**, with
     - rows: documents
@@ -2648,7 +2650,7 @@ With:
 - `|d in D in which t in d|`: number of documents in which the term `t` appears
 - `C(d,t)`: how many times the term `t` appears in document `d`
 
-However, note that `TfidfVectorizer()` addiitonally normalizes each row to have length 1.
+However, note that `TfidfVectorizer()` additionally normalizes each row to have length 1.
 
 ### 8.4 Python Lab: NNMF for Text Topic Discovery
 
@@ -2713,7 +2715,7 @@ set([d.split('.')[0] for d in docs]) # {'business', 'entertainment', 'politics',
 
 ### --- Process and prepare text features
 
-# We convert the sparse matrix list into alist of tuples
+# We convert the sparse matrix list into a list of tuples
 # Important links:
 # https://docs.scipy.org/doc/scipy/reference/sparse.html
 # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html
@@ -2753,7 +2755,7 @@ coo.shape # (2225, 9635)
 
 # With .toarray() we can convert the sparse matrix
 # into an expanded matrix.
-# We can assmble everything now
+# We can assemble everything now
 # Now we can see why we want a sparse matrix:
 # the data frame is full of zeros!
 pd.DataFrame(data=coo.toarray(), columns=words, index=docs)
@@ -2798,8 +2800,6 @@ topic_doc.reset_index().groupby('index').mean().idxmax()
 # The most important 20 words for topic x
 topic_word.T.sort_values(by='topic_5', ascending=False).head(20)
 
-
-
 ```
 
 ### 8.5 Python Lab: NLP Feature Extraction
@@ -2819,7 +2819,7 @@ import numpy as np
 import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
-# We take only th etext column, but there are some other columns, too:
+# We take only the text column, but there are some other columns, too:
 # id, topic
 df = pd.read_csv('tfidf.csv').iloc[:,1]
 df.head(5)
