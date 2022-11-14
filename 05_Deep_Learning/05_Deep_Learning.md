@@ -13,8 +13,10 @@ The Specialization is divided in 6 courses, and each of them has its own folder 
 
 This file focuses on the **fifth course: Deep Learning and Reinforcement Learning**
 
+In contrast to the other courses of the Spacialization, I've taken few notes this time; I you're interested in more details on Deep Learning, I suggest you to visit my repository [deep_learning_udacity](https://github.com/mxagar/deep_learning_udacity).
+
 Mikel Sagardia, 2022.  
 No guarantees
 
-## Overview of Contents
+## Table of Contents
 
