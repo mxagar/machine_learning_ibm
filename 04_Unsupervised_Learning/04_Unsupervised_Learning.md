@@ -3060,7 +3060,7 @@ Print PDF with text, code not compulsory.
 
 ### Repository
 
-- [nips_topic_identification](https://github.com/mxagar/nips_topic_identification)
 - [music_genre_classification](https://github.com/mxagar/music_genre_classification) `/ data_analysis / UnsupervisedLearning.ipynb`
+- [nips_topic_identification](https://github.com/mxagar/nips_topic_identification)
 
 
