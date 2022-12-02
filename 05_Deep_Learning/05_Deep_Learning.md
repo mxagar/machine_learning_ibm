@@ -30,6 +30,7 @@ No guarantees
     - [1.3 Lab: Gradient Descend and Neural Networks](#13-lab-gradient-descend-and-neural-networks)
     - [1.4 Backpropagation and Activation Functions](#14-backpropagation-and-activation-functions)
     - [1.5 Lab: Backpropagation](#15-lab-backpropagation)
+    - [1.6 Regularization](#16-regularization)
 
 ## 1. Introduction
 
@@ -96,9 +97,28 @@ The derivatives are obtained by applying the chain rule. In practice, we see tha
 
 Vanishing gradient problem: since we chain multiplications and the slope of the sigmoid is small at extremes, products become very small, so the gradient vanishes. A solution is to use other activation functions, such as ReLU.
 
+Typical activation functions:
+
+- Sigmoid: problems with vanishing gradient.
+- Hyperbolic tangent: stretched sigmoid; also prone to vanishing gradient.
+- ReLU: Rectified Linear Unit. Better than sigmoid and `tanh`; bit for negative values we don't learn anything.
+- Leaky ReLU: a slope is added for negative values in the ReLU function, so we can learn something. However, leaky ReLUs are not always better than ReLU!
+
 ### 1.5 Lab: Backpropagation
 
 Notebook provided and commented: `05c_DEMO_Backpropagation.ipynb`.
 
-A simple neural network with a hidden layer is defined with numpy and the feedforward and backpropagation passes are carried out manually.
+A simple neural network with a hidden layer is defined with numpy and the feedforward and backpropagation passes are carried out manually. 
+
+### 1.6 Regularization
+
+Deep NN: Those with >=2 hidden layers; the more hidden layers, the more complex patterns that can be learned. But we risk overfitting = learning noise and not being able to generalize.
+
+Regularization: any technique done to reduce generalization error, but not the training error:
+
+- Regularization penalty in cost function; we can do that also with neural networks.
+- Dropout. Typical method in NNs. We need to scale weights with `p` during test time if they were cancelled with `p` probability during training!
+- Early stopping: Check validation error and stop as it starts increasing.
+- Stochastic GD or mini-batch GD regularize the training, too, because we don't fit the dataset perfectly.
+
 
