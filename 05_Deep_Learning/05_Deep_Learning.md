@@ -31,6 +31,8 @@ No guarantees
     - [1.4 Backpropagation and Activation Functions](#14-backpropagation-and-activation-functions)
     - [1.5 Lab: Backpropagation](#15-lab-backpropagation)
     - [1.6 Regularization](#16-regularization)
+    - [1.7 Optimizers](#17-optimizers)
+    - [1.8 Data Shuffling](#18-data-shuffling)
 
 ## 1. Introduction
 
@@ -70,6 +72,12 @@ Concepts introduced:
 - Weight update with learning rate: `w_new <- w_old - learning_rate*[dJ/dw_i]`.
 - Stochastic gradient descend: in gradient descend we compute the error/cost considering all samples; in stochastic gradient descend we take one random sample. That's more noisy.
 - Mini-batch gradient descend: we compute the cost with a batch of samples. Best of both worlds: less noisy and less intensive.
+- Epoch: single pass through all training data
+  - In batch gradient descend an epoch is one step.
+  - In SGD on epoch is many steps, as many as samples.
+  - In mini-batch GD, one epoch is also many steps, as many as number of batches.
+
+![Batching Approaches](./pics/batching.jpg)
 
 ### 1.3 Lab: Gradient Descend and Neural Networks
 
@@ -121,4 +129,41 @@ Regularization: any technique done to reduce generalization error, but not the t
 - Early stopping: Check validation error and stop as it starts increasing.
 - Stochastic GD or mini-batch GD regularize the training, too, because we don't fit the dataset perfectly.
 
+### 1.7 Optimizers
 
+Optimizers perform the weight update; the easiest optimizer is gradient descend:
+
+    w_new <- w_old - learning_rate * [dJ/d_w_i]
+
+However, there are many more optimizers.
+
+**Momentum**: use running average of the previous steps; momentum is the factor that scales the influence of all previous steps. Common value: `eta = 0.9`. Often times, the learning rate is chosen as `alpha = 1 - eta`. The effect of using momentum is that we smooth out the steps, as compared to stochastic/gradient descend.
+
+![Momentum](./pics/momentum.jpg)
+
+**Nesterov Momentum**: momentum alone can overshoot the optimum solution. Nesterov momentum controls that overshooting. The effect is that the steps are even more smooth.
+
+![Nesterov](./pics/nesterov.jpg)
+
+**AdaGrad**: Adaptive gradient algorithm:
+
+- Frequently updated weights are updated less.
+- We track the value `G`, sum of previous gradients, which increases every iteration and divide each learning rate with it.
+- Effect: as we get closer to the solution, the learning rate is smaller, so we avoid overshooting.
+
+![AdaGrad](./pics/adagrad.jpg)
+
+**RMSProp**: Root mean square propagation. Similar to AdaGrad, but more efficient. It tracks `G`, but older gradients have a smaller weight; the effect is that newer gradients have more impact.
+
+**Adam**: Momentum and RMSProp combined. We have two parameters to tune, which have these default values:
+
+- `beta1 = 0.9`
+- `beta2 = 0.999`
+
+![Adam](./pics/adam.jpg)
+
+Which one should we use? Adam and RMSProp are very popular and work very well: they're fast. However, if we have convergence issues, we should try simple optimizers, like stochastic gradient descend.
+
+### 1.8 Data Shuffling
+
+We need to shuffle our data every epoch to avoid cyclical movement and doing the same path every epoch! When we shuffle, the batches are different each time, and of course, the order is not the same.
