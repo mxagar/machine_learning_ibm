@@ -37,7 +37,10 @@ No guarantees
   - [2. Keras: Basics](#2-keras-basics)
   - [3. Convolutional Neural Networks (CNNs)](#3-convolutional-neural-networks-cnns)
     - [3.1 Main Concepts](#31-main-concepts)
-    - [3.2 Lab: CNN](#32-lab-cnn)
+    - [3.2 Lab: CNNs on CIFAR-10](#32-lab-cnns-on-cifar-10)
+    - [3.3 Transfer Learning](#33-transfer-learning)
+    - [3.4 Lab: Transfer Learning](#34-lab-transfer-learning)
+    - [3.5 Popular CNN Architectures](#35-popular-cnn-architectures)
 
 ## 1. Introduction
 
@@ -413,7 +416,7 @@ Another important layer in CNNs: **Pooling**: Pooling reduces image size by mapp
 - Max-pooling.
 - Average-pooling.
 
-### 3.2 Lab: CNN
+### 3.2 Lab: CNNs on CIFAR-10
 
 In this section, this notebook is explained:
 
@@ -585,3 +588,230 @@ y_true = np.argmax(y_test, axis=1) # undo one-hot encoding
 print(accuracy_score(y_true, y_pred))
 
 ```
+
+### 3.3 Transfer Learning
+
+- First layers learn filter weights able to detect edges; as we go deeper, the learned shapes start getting more complex.
+- Edges and simple shapes generalize well, that's why we can apply transfer learning: we take the backbone/initial part of the trained complex CNN and re-use it for our application. Last layers (the classifier) are the ones that are trained.
+- Possible transfer learning techniques:
+    - Only the classifier: transfer learning
+    - Additional training of the pre-trained network: fine tuning
+        - We can choose to re-train the entire network using as initialization the pre-trained weights or we can select an amount of layers.
+    - Which one should we use?
+        - The more similar the datasets, the less fine-tuning necessary.
+        - The more data we have available, the more the model will benefit from fine-tuning
+
+### 3.4 Lab: Transfer Learning
+
+In this section, this notebook is explained:
+
+`05f_DEMO_Transfer_Learning.ipynb`
+
+In it, the MNIST dataset is used. First, a model is trained with the digits `0-4`; then, we freeze the *feature layer* weights and apply transfer learning to the model in which only the *classifier layers* are re-trained with the digits `5-9`. The training is faster because we train only the classifier.
+
+Most important steps:
+
+1. Imports
+2. Define parameters
+3. Define data pre-processing + training function
+4. Load dataset + split
+5. Train: Digits 5-9
+6. Freeze feature layers and re-train with digits 0-4
+
+```python
+
+###
+# 1. Imports
+###
+
+import datetime
+import keras
+from keras.datasets import mnist
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+from keras import backend as K
+#from tensorflow import keras
+#from tensorflow.keras.datasets import mnist
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
+#from tensorflow.keras.layers import Conv2D, MaxPooling2D
+#from tensorflow.keras import backend as K
+
+# Used to help some of the timing functions
+now = datetime.datetime.now
+
+###
+# 2. Define parameters
+###
+
+# set some parameters
+batch_size = 128
+num_classes = 5
+epochs = 5
+
+# set some more parameters
+img_rows, img_cols = 28, 28
+filters = 32
+pool_size = 2
+kernel_size = 3
+
+## This just handles some variability in how the input data is loaded
+if K.image_data_format() == 'channels_first':
+    input_shape = (1, img_rows, img_cols)
+else:
+    input_shape = (img_rows, img_cols, 1)
+
+###
+# 3. Define data pre-processing + training function
+###
+
+# To simplify things, write a function to include all the training steps
+# As input, function takes a model, training set, test set, and the number of classes
+# Inside the model object will be the state about which layers we are freezing and which we are training
+def train_model(model, train, test, num_classes):
+    # train = (x_train, y_train)
+    # test = (x_test, y_test)
+    x_train = train[0].reshape((train[0].shape[0],) + input_shape) # (60000, 28, 28, 1)
+    x_test = test[0].reshape((test[0].shape[0],) + input_shape) # (60000, 28, 28, 1)
+    x_train = x_train.astype('float32')
+    x_test = x_test.astype('float32')
+    x_train /= 255
+    x_test /= 255
+    print('x_train shape:', x_train.shape)
+    print(x_train.shape[0], 'train samples')
+    print(x_test.shape[0], 'test samples')
+
+    # convert class vectors to binary class matrices
+    y_train = keras.utils.to_categorical(train[1], num_classes)
+    y_test = keras.utils.to_categorical(test[1], num_classes)
+
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adadelta',
+                  metrics=['accuracy'])
+    # Measure time
+    t = now()
+    model.fit(x_train, y_train,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1,
+              validation_data=(x_test, y_test))
+    print('Training time: %s' % (now() - t)) # Measure time
+
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test score:', score[0])
+    print('Test accuracy:', score[1])
+
+###
+# 4. Load dataset + split
+###
+
+# the data, shuffled and split between train and test sets
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+# create two datasets: one with digits below 5 and the other with 5 and above
+x_train_lt5 = x_train[y_train < 5]
+y_train_lt5 = y_train[y_train < 5]
+x_test_lt5 = x_test[y_test < 5]
+y_test_lt5 = y_test[y_test < 5]
+
+x_train_gte5 = x_train[y_train >= 5]
+y_train_gte5 = y_train[y_train >= 5] - 5
+x_test_gte5 = x_test[y_test >= 5]
+y_test_gte5 = y_test[y_test >= 5] - 5
+
+x_train.shape # (60000, 28, 28)
+y_train.shape # (60000,)
+input_shape # (28, 28, 1)
+
+###
+# 5. Define model: feature layers + classifier
+###
+
+# Define the "feature" layers.  These are the early layers that we expect will "transfer"
+# to a new problem.  We will freeze these layers during the fine-tuning process
+feature_layers = [
+    Conv2D(filters, kernel_size,
+           padding='valid',
+           input_shape=input_shape),
+    Activation('relu'),
+    Conv2D(filters, kernel_size),
+    Activation('relu'),
+    MaxPooling2D(pool_size=pool_size),
+    Dropout(0.25),
+    Flatten(),
+]
+
+# Define the "classification" layers.  These are the later layers that predict the specific classes from the features
+# learned by the feature layers.  This is the part of the model that needs to be re-trained for a new problem
+classification_layers = [
+    Dense(128),
+    Activation('relu'),
+    Dropout(0.5),
+    Dense(num_classes),
+    Activation('softmax')
+]
+
+# We create our model by combining the two sets of layers as follows
+model = Sequential(feature_layers + classification_layers)
+
+# Let's take a look: see "trainable" parameters
+model.summary()
+
+###
+# 5. Train: Digits 5-9
+###
+
+# Now, let's train our model on the digits 5,6,7,8,9
+train_model(model,
+            (x_train_gte5, y_train_gte5),
+            (x_test_gte5, y_test_gte5), num_classes)
+
+
+###
+# 6. Freeze feature layers and re-train with digits 0-4
+###
+
+# Freeze only the feature layers
+for l in feature_layers:
+    l.trainable = False
+
+model.summary() # We see that the "trainable" parameters are less
+
+train_model(model,
+            (x_train_lt5, y_train_lt5),
+            (x_test_lt5, y_test_lt5), num_classes)
+
+```
+
+### 3.5 Popular CNN Architectures
+
+- LeNet
+  - Yann LeCun, 1990
+  - First CNN
+  - Back & white images; tested with MNIST
+  - Three times: Conv 5x5 + Subsampling (pooling); then, 2 fully connected layers. 
+- AlexNet
+  - It popularized the CNNs.
+  - Turning point for modern Deep Learning.
+  - 16M parameters.
+  - They parallelized the network to train in 2 GPUs.
+  - Data augmentation was performed to prevent overfitting and allow generalization.
+  - ReLUs were used: huge step at the time.
+- VGG
+  - It simplified the choice of sizes: it uses only 3x3 kernels and deep networks, which effectively replace larger convolutions.
+  - The receptive field of two 3x3 kernels is like the receptive field of one 5x5 kernel, but with less parameters! As we go larger, the effect is bigger.
+  - VGG showed that many small kernels are better: deep networks.
+- Inception
+  - The idea is that we often don't know which kernel size should be better applied; thus, instead of fixing on size, we apply several in parallel for each layer and then we concatenate the results.
+  - In order to control the depth for each branch, 1x1 convolutions were introduced.
+  - See the architecture schematic below.
+- ResNet
+  - VGG showed the power of deep networks; however, from a point on, as we goo deeper, the performance decays because:
+    - Early layers are harder too update
+    - Vanishing gradient
+  - ResNet proposed learning the residuals; in practice, that means that we add the output from the 2nd previous layer to the current output. As a result, the delta is learned and the previous signal remains untouched. With that, we alleviate considerably the vanishing gradient issue and the networks can be **very deep**!
+
+![Inception: Block](./pics/inception_1.jpg)
+
+![Inception: Architecture](./pics/inception_2.jpg)
