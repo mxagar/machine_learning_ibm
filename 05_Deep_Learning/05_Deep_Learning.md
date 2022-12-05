@@ -33,7 +33,11 @@ No guarantees
     - [1.6 Regularization](#16-regularization)
     - [1.7 Optimizers](#17-optimizers)
     - [1.8 Data Shuffling](#18-data-shuffling)
+    - [1.9 Loss Functions](#19-loss-functions)
   - [2. Keras: Basics](#2-keras-basics)
+  - [3. Convolutional Neural Networks (CNNs)](#3-convolutional-neural-networks-cnns)
+    - [3.1 Main Concepts](#31-main-concepts)
+    - [3.2 Lab: CNN](#32-lab-cnn)
 
 ## 1. Introduction
 
@@ -170,6 +174,20 @@ Which one should we use? Adam and RMSProp are very popular and work very well: t
 ### 1.8 Data Shuffling
 
 We need to shuffle our data every epoch to avoid cyclical movement and doing the same path every epoch! When we shuffle, the batches are different each time, and of course, the order is not the same.
+
+### 1.9 Loss Functions
+
+See also: [keras/losses](https://www.tensorflow.org/api_docs/python/tf/keras/losses).
+
+- Regression:
+    - `MeanSquaredError()`
+    - `MeanAbsoluteError()`
+    - `cosine_similarity()`
+    - ...
+- Classification:
+    - `BinaryCrossentropy()`
+    - Multi-class: `CategoricalCrossentropy()`
+    - ...
 
 ## 2. Keras: Basics
 
@@ -353,4 +371,217 @@ model.evaluate(X_test_norm,y_test)
 model.save('my_model.h5')
 later_model = load_model('my_model.h5')
 later_model.predict(X_test_norm.iloc[101, :])
+```
+
+## 3. Convolutional Neural Networks (CNNs)
+
+### 3.1 Main Concepts
+
+Very brief notes on the main concepts:
+
+- Fully connected too many parameters
+- Images contain object that need to be identified with invariance wrt
+  - Translation
+  - Size/scale
+  - Rotation
+- Pixel values change few values in their neighborhood unless we have edges or salient texture.
+- Convolutional layers: 
+  - Kernels or grid are overlaid on image patches centered in a pixel.
+  - Kernel grid is multiplied one-by-one to pixel values beneath.
+  - Sum is the result of the center pixel.
+  - Kernel is strided/swept along the X & Y axes of the image.
+- Kernels are filters: low pass (blur) or high pass (edges).
+- The weights of the kernels are learnt.
+- Convolutional kernels require much less parameters than dense/fully connected layers and are much better suited to the spatial information contained in images.
+
+Common settings/parameters:
+
+- **Kernel size**: width and height pixels of the filters; usually square kernels are applied with odd numbers: `3 x 3` (recommended), `5 x 5` (less recommended, because more parameters).
+- **Padding**: so that we can use corner/edge pixels as centers for the kernels, we add extra pixels on the edges corner; usually, the added pixels have value 0, i.e., *zero-padding*.
+  - If we add no padding, the output activation map will be smaller than the input.
+  - To conserve image size: `padding = (F-1)/2` with `F` kernel/filter size.
+- **Stride**: movement of the kernel in X & Y directions.
+  - Usually same stride is used in X & Y.
+  - If `stride > 2` we're dividing the image size by `stride`.
+- **Depth**: number of channels; we have input and output channels.
+  - Each input image has `n` channels.
+  - Each output image/map has `N` channels.
+  - We have `N` filters, each with `n` kernels applied to the input image.
+
+Another important layer in CNNs: **Pooling**: Pooling reduces image size by mapping an image patch to a value. Commonly `2 x 2` pooling is done, using as stride the pooling window size (i.e., no overlap). We have different types:
+
+- Max-pooling.
+- Average-pooling.
+
+### 3.2 Lab: CNN
+
+In this section, this notebook is explained:
+
+`05e_DEMO_CNN.ipynb`
+
+In it, the [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset is used, which consists of 60000 32x32 color images in 10 classes, with 6000 images per class. There are 50000 training images and 10000 test images. Check the current [performance results here](http://rodrigob.github.io/are_we_there_yet/build/classification_datasets_results.html).
+
+The 10 classes are:
+
+<ol start="0">
+<li> airplane
+<li> automobile
+<li> bird
+<li> cat
+<li> deer
+<li> dog
+<li> frog
+<li> horse
+<li> ship
+<li> truck
+</ol>
+
+In the notebook, the following steps are carried out:
+
+1. Imports
+2. Load dataset
+3. Prepare dataset: encode & scale
+4. Define model
+5. Train model
+6. Evaluate model
+
+```python
+
+###
+# 1. Imports
+##
+
+import keras
+#from tensorflow.keras.datasets import cifar10
+#from tensorflow.keras.preprocessing.image import ImageDataGenerator
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
+#from tensorflow.keras.layers import Conv2D, MaxPooling2D
+from keras.datasets import cifar10
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+import matplotlib.pyplot as plt
+
+###
+# 2. Load dataset
+##
+
+# The data, shuffled and split between train and test sets:
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+print('x_train shape:', x_train.shape) # (50000, 32, 32, 3)
+print(x_train.shape[0], 'train samples') # 50000 train samples
+print(x_test.shape[0], 'test samples') # 10000 test samples
+
+###
+# 3. Prepare dataset: encode & scale
+##
+
+# Each image is a 32 x 32 x 3 numpy array
+x_train[444].shape
+
+# Visualize the images
+print(y_train[444]) # [9]
+plt.imshow(x_train[444]);
+
+# One-hot encoding in Keras/TF
+num_classes = 10
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+
+y_train[444] # [0., 0., 0., 0., 0., 0., 0., 0., 0., 1.]
+
+# Let's make everything float and scale
+x_train = x_train.astype('float32')
+x_test = x_test.astype('float32')
+x_train /= 255
+x_test /= 255
+
+###
+# 4. Define model
+##
+
+# Let's build a CNN using Keras' Sequential capabilities
+
+model = Sequential()
+
+# Conv2D has these parameters:
+# - filters: the number of filters used (= depth of output)
+# - kernel_size: an (x,y) tuple giving the height and width of the kernel
+# - strides: an (x,y) tuple giving the stride in each dimension; default and common (1,1)
+# - input_shape: required only for the first layer (= image channels)
+# - padding: "valid" = no padding, or "same" = zeros evenly;
+# When padding="same" and strides=1, the output has the same size as the input
+# Otherwise, general formula for the size:
+# W_out = (W_in + 2P - F)/S + 1; P: "same" = (F-1)/2 ?
+model.add(Conv2D(filters=32,
+                   kernel_size=(3,3), # common
+                   padding='same', # 
+                   strides=(1,1), # common, default value
+                   input_shape=x_train.shape[1:]))
+# We can specify the activation as a layer (as done here)
+# or in the previous layer as a parameter
+model.add(Activation('relu'))
+model.add(Conv2D(32, (3, 3)))
+model.add(Activation('relu'))
+# Parameters od MaxPooling2D:
+# - pool_size: the (x,y) size of the grid to be pooled; 2x2 (usual) halvens the size
+# - strides: assumed to be the pool_size unless otherwise specified
+# - padding: assumed "valid" = no padding
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+
+model.add(Conv2D(64, (3, 3), padding='same'))
+model.add(Activation('relu'))
+model.add(Conv2D(64, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+
+# Flatten appears when going from convolutional layers to
+# fully connected layers.
+model.add(Flatten())
+model.add(Dense(units=512))
+model.add(Activation('relu'))
+model.add(Dropout(0.5))
+model.add(Dense(units=num_classes))
+model.add(Activation('softmax'))
+
+# Always check number of paramaters!
+model.summary()
+
+###
+# 5. Train model
+##
+
+# initiate RMSprop optimizer
+opt = keras.optimizers.RMSprop(lr=0.0005)
+
+# Let's train the model using RMSprop
+model.compile(loss='categorical_crossentropy',
+              optimizer=opt,
+              metrics=['accuracy'])
+
+model.fit(x_train, y_train,
+              batch_size=batch_size,
+              epochs=5,
+              validation_data=(x_test, y_test),
+              shuffle=True)
+
+###
+# 6. Evaluate model
+##
+
+# Validation loss and Validation accuracy
+model.evaluate(x_test, y_test)
+
+# Manual computation of the accuracy
+import numpy as np
+from sklearn.metrics import accuracy_score
+
+y_pred = model.predict_classes(x_test)
+y_true = np.argmax(y_test, axis=1) # undo one-hot encoding
+print(accuracy_score(y_true, y_pred))
+
 ```
