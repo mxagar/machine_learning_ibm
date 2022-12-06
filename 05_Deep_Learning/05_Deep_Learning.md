@@ -40,7 +40,9 @@ No guarantees
     - [3.2 Lab: CNNs on CIFAR-10](#32-lab-cnns-on-cifar-10)
     - [3.3 Transfer Learning](#33-transfer-learning)
     - [3.4 Lab: Transfer Learning](#34-lab-transfer-learning)
-    - [3.5 Popular CNN Architectures](#35-popular-cnn-architectures)
+    - [3.5 Custom Datasets](#35-custom-datasets)
+    - [3.6 Popular CNN Architectures](#36-popular-cnn-architectures)
+  - [4. Recurrent Neural Networks (RNN)](#4-recurrent-neural-networks-rnn)
 
 ## 1. Introduction
 
@@ -784,7 +786,165 @@ train_model(model,
 
 ```
 
-### 3.5 Popular CNN Architectures
+### 3.5 Custom Datasets
+
+In order to work with custom datasets, as in Pytorch, we need to have the following underlying structure:
+
+```
+train/
+    class_1/
+        file_1.jpg
+        file_2.jpg
+        ...
+    class_2/
+    ...
+    class_n/
+test/
+    class_1/
+    class_2/
+    ...
+    class_n/
+```
+
+With that file structure, we create an `ImageDataGenerator` object and use it in `model.fit_generator()`. The `ImageDataGenerator` performs **data augmentation**, too!
+
+The following example shows how to:
+
+- Instantiate `ImageDataGenerator` with transformation values.
+- Create train and test iterators.
+- Define a CNN model.
+- Fit the model with generator/iterators.
+- Load an image without the generators/iterators and perform inference with it.
+
+```python
+import matplotlib.pyplot as plt
+import cv2
+%matplotlib inline
+
+path = './'
+img = cv2.imread(path+'CATS_DOGS/train/CAT/0.jpg')
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+plt.imshow(img)
+img.shape # (375, 500, 3) - random sized images, need to be resized
+img.max # 255 - need to be scaled
+
+# Data augmentation: for more robust and generalizable trainings
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# We pass max absolute values of ranges for data augmentation
+# rotation: degrees by which image can be rotated
+# width, height shift: % that the image width/height can be changed
+# rescale: normalization = divide by max pixel value
+# shear: % by which image can be stretched from the diagonal
+# zoom: % of image augmenation
+# horizontal flip: flip also images?
+# fill mode: when pixels are created/removed (eg., when rotating), which values do we take?
+# IMPORTANT NOTE: another option is image_dataset_from_directory
+# shown in the next section 3.6
+image_gen = ImageDataGenerator(rotation_range=30,
+                              width_shift_range=0.1,
+                              height_shift_range=0.1,
+                              rescale=1/255,
+                              shear_range=0.2,
+                              zoom_range=0.2,
+                              horizontal_flip=True,
+                              fill_mode='nearest')
+
+# We can apply this augmentation transform image-wise easily!
+# Every time we call it, we have a slighthly different transformed image
+plt.imshow(image_gen.random_transform(img))
+
+# We define the input shape
+# All images are going to be resized to that shape
+input_shape = (150, 150, 3)
+
+# We define also a batch size
+# Images are going to be delivered in batches
+# A standard size is 16
+batch_size = 16
+
+train_image_gen = image_gen.flow_from_directory(path+'CATS_DOGS/train',
+                                               target_size=input_shape[:2],
+                                               batch_size=batch_size,
+                                               class_mode='binary')
+
+train_image_gen = image_gen.flow_from_directory(path+'CATS_DOGS/train',
+                                               target_size=input_shape[:2],
+                                               batch_size=batch_size,
+                                               class_mode='binary')
+
+# We can get class/category names from folder names
+train_image_gen.class_indices
+
+# Define model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Activation, Dropout, Flatten, Conv2D, Dense, MaxPooling2D
+
+model = Sequential()
+# Convolution + Max-Pooling 1
+model.add(Conv2D(filters=32, kernel_size=(3,3), input_shape=input_shape, activation='relu'))
+model.add(MaxPooling2D(pool_size=(2,2)))
+# Convolution + Max-Pooling 2 (once more, because images are quite complex)
+model.add(Conv2D(filters=32, kernel_size=(3,3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2,2)))
+# Convolution + Max-Pooling 3 (once more, because images are quite complex)
+model.add(Conv2D(filters=32, kernel_size=(3,3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2,2)))
+model.add(Flatten())
+model.add(Dense(128))
+model.add(Activation('relu')) # that's a new feature: we can add activaton separately!
+model.add(Dropout(0.5)) # Dropout layer: 50% of neurons shut down randomly
+model.add(Dense(1)) # Binary: Cat / Dog?
+model.add(Activation('softmax'))
+
+model.compile(loss='binary_crossentropy',
+             optimizer='adam',
+             metrics=['accuracy'])
+model.summary()
+
+# TRAIN
+# usually an epoch is a complete pass of all training images
+# if we define steps_per_epoch, then,
+# epoch: steps_per_epoch x batch_size images, not all of them
+# We can also pass the validation/test split here to check/prevent overfitting
+# Very low values are used here to get a fast training; if done seriously, use higher commented values
+results = model.fit_generator(train_image_gen,
+                    epochs=150, # 150
+                    steps_per_epoch=1, # 1000
+                    validation_data=test_image_gen,
+                    validation_steps=1) # 300
+
+# Inference
+from tensorflow.keras.preprocessing import image
+
+# We can load the image and resize it automatically
+# BUT: the image is not a numpy array, so it must be converted
+img = image.load_img(img, target_size=input_shape[:2])
+
+# We can display it, but it's an image object
+# not a numpy array yet
+plt.imshow(img)
+
+# We need to convert it to a numpy array manually
+img = image.img_to_array(img)
+
+# And we need to give the image the shape (Sample, W, H, C) = (1, W, H, C) = (1, 150, 150, 3)
+import numpy as np
+img = np.expand_dims(img, axis=0)
+
+img.shape # (1, 150, 150, 3)
+
+# Class 0/1 inferred
+result = model.predict_classes(img) # [[1]]
+
+train_image_gen.class_indices # {'CAT': 0, 'DOG': 1}
+
+# Raw probability should be predicted
+result = model.predict(img) # [[1.]]
+```
+
+### 3.6 Popular CNN Architectures
 
 - LeNet
   - Yann LeCun, 1990
@@ -815,3 +975,102 @@ train_model(model,
 ![Inception: Block](./pics/inception_1.jpg)
 
 ![Inception: Architecture](./pics/inception_2.jpg)
+
+All these architectures are available at: [Keras Applications: Pre-trained Architectures](https://keras.io/api/applications/).
+
+We can import the architectures with pre-trained weights and apply transfer learning with them.
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+import PIL
+
+import tensorflow as tf
+from tensorflow.keras import layers,Dense,Flatten
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+
+# Get the data
+# Let's suppose a dataset arranged as explained in the previous section
+# with 5 classes
+classnames = ['A', 'B', 'C', 'D', 'E']
+
+# Create training and validation image iterators
+# NOTE: another option would be ImageDataGenerator, show in previous section 3.5
+img_height,img_width=180,180
+batch_size=32
+train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+  data_dir,
+  validation_split=0.2,
+  subset="training",
+  seed=123,
+  image_size=(img_height, img_width),
+  batch_size=batch_size)
+
+val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+  data_dir,
+  validation_split=0.2,
+  subset="validation",
+  seed=123,
+  image_size=(img_height, img_width),
+  batch_size=batch_size)
+
+# Plot some images
+plt.figure(figsize=(10, 10))
+for images, labels in train_ds.take(1):
+  for i in range(6):
+    ax = plt.subplot(3, 3, i + 1)
+    plt.imshow(images[i].numpy().astype("uint8"))
+    plt.title(classnames[labels[i]])
+    plt.axis("off")*
+
+#####
+## Transfer Learning
+#####
+
+# Empty sequential model
+resnet_model = Sequential()
+
+# From Keras Applications, we can download many pre-trained models
+# If we specify include_top=False, the original input/output layers
+# are not imported.
+# Note that we can specify our desired the input and output layer sizes!
+pretrained_model= tf.keras.applications.ResNet50(include_top=False,
+                   input_shape=(180,180,3),
+                   pooling='avg',
+                   classes=5,
+                   weights='imagenet')
+# Freeze layers
+for layer in pretrained_model.layers:
+        layer.trainable=False
+
+# Add ResNet to empty sequential model
+resnet_model.add(pretrained_model)
+
+# Now, add the last layers of our model which map the extracted features
+# too the classes - that's the classifier, what's really trained
+resnet_model.add(Flatten())
+resnet_model.add(Dense(512, activation='relu'))
+resnet_model.add(Dense(5, activation='softmax'))
+
+resnet_model.summary()
+
+resnet_model.compile(optimizer=Adam(lr=0.001),loss='categorical_crossentropy',metrics=['accuracy'])
+
+# Train/Fit
+history = resnet_model.fit(train_ds, validation_data=val_ds, epochs=10)
+
+# Inference
+import cv2
+
+image = cv2.imread('./path/to/image.jpg')
+image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+image_resized= cv2.resize(image, (img_height, img_width))
+image=np.expand_dims(image_resized,axis=0)
+
+pred=resnet_model.predict(image)
+output_class=class_names[np.argmax(pred)]
+```
+
+## 4. Recurrent Neural Networks (RNN)
+
