@@ -43,6 +43,8 @@ No guarantees
     - [3.5 Custom Datasets](#35-custom-datasets)
     - [3.6 Popular CNN Architectures](#36-popular-cnn-architectures)
   - [4. Recurrent Neural Networks (RNN)](#4-recurrent-neural-networks-rnn)
+    - [4.1 Simple RNN Networks](#41-simple-rnn-networks)
+    - [4.1 Long Short-Term Memory (LSTM) Units](#41-long-short-term-memory-lstm-units)
 
 ## 1. Introduction
 
@@ -1073,4 +1075,53 @@ output_class=class_names[np.argmax(pred)]
 ```
 
 ## 4. Recurrent Neural Networks (RNN)
+
+### 4.1 Simple RNN Networks
+
+Introduced concepts:
+
+- Sequences of words contain context information which is not captured by bags of words.
+- Recurrent Neural Networks (RNN) deal with sequential data.
+- A RNN neuron stores state information, which is related to the history/sequence of words/element input to it.
+- The output of an RNN cell is: prediction + state.
+- The state from the previous step is also passed to the neuron again.
+- RNNs are not limited to word vectors! They can work with any sequential data: sales, etc.
+
+Unrolled RNN layer:
+
+![Unrolled RNN](./pics/unrolled_rnn.jpg)
+
+Equivalence with my previous notes:
+
+![Unrolled RNN](./pics/SimpleRNN.png)
+
+    x_t = w_i: word/vector at position t/i in sequence
+    s_t = s_i: state at position t/i in sequence
+    y_t = o_i: output at position t/i in sequence
+    W_x = U: core RNN, dense layer applied to input
+    W_s = W: core RNN, dense layer applied to previous state
+    W_y = V: final dense layer
+
+Dimensions
+
+    r = dimension or input vector
+    s = dimension of hidden state
+    t = dimension of output
+
+    U: r x s
+    W: s x s
+    V: s x t
+
+Notes:
+
+- The weight matrices `U, W, V` are the same across all steps/positions!
+- We usually only care about the last output!
+- The backpropagation is done *through time*, thus, the vanishing gradient problem becomes more patent. Therefore, we can't work with very long sequences. A solution to that length limitation are **Long Short-Term Memory (LSTM)** cells, introduced in the next section
+- We usually **pad** and **truncate** sequences to make them of a fixed length.
+
+
+### 4.1 Long Short-Term Memory (LSTM) Units
+
+![Unrolled RNN](./pics/LSTMs.png)
+
 
