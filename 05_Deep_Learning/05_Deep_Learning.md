@@ -46,6 +46,8 @@ No guarantees
     - [4.1 Simple RNN Networks](#41-simple-rnn-networks)
     - [4.2 Lab: SimpleRNN](#42-lab-simplernn)
     - [4.3 Long Short-Term Memory (LSTM) Units](#43-long-short-term-memory-lstm-units)
+      - [Gated Recurrent Units (GRUs)](#gated-recurrent-units-grus)
+    - [4.4 Sequence to Sequence Models: Seq2Seq](#44-sequence-to-sequence-models-seq2seq)
 
 ## 1. Introduction
 
@@ -1248,6 +1250,50 @@ print('Test accuracy:', acc) # 0.7853999733924866
 
 ### 4.3 Long Short-Term Memory (LSTM) Units
 
+Simple RNN layers suffer from the vanishing gradient problem, so we cannot handle very long sequences. Schmidhuber published in 1997 the **Long Short-Term Memory** units, which alleviate that issue and are still used nowadays.
+
+The LSTM cells have several gates that decide which information to forget and to remember, and their memory has two parts: short-term memory and long-term memory.
+
+The math is in reality not very complex: we apply several sensible operations to the vectors:
+
+- Linear mappings
+- Concatenation
+- Element-wise multiplication
+- Activation with `tanh` and `sigmoid`
+- etc.
+
+However, the key aspect is summarized by the following picture/model:
+
 ![LSTM Unit](./pics/LSTMs.png)
 
+More information can be found in my DL notes: [deep_learning_udacity](https://github.com/mxagar/deep_learning_udacity)
 
+In practice, we
+
+```python
+
+```
+
+#### Gated Recurrent Units (GRUs)
+
+They appeared in 2014. They are a simplification of the LSTM cell which is maybe less accurate but requires less memory and are faster.
+
+We can easily interchange them both; maybe LSTMs are able to learn more complex patterns and GRUs are suited for smaller datasets.
+
+### 4.4 Sequence to Sequence Models: Seq2Seq
+
+Sequence to sequence models can be used for instance in machine translation. They have an **encoder-decoder** architecture:
+
+- The encoder can be an RNN: we pass a sequence of words (sentence) which finishes with special token `<EOS>` (i.e., *end of sentence*).
+- We take the last hidden state: it contains information of the complete sequence we introduced.
+- We pass to the decoder the last hidden state of the encoder as the initial state and the initial special token `<SOS>` (i.e., *start of sentence*).
+- The decoder starts outputting a sequence of words/tokens step by step and we collect them.
+- We input the last token in the next step.
+- The sequence ends when the decoder outputs `<EOS>`.
+
+![Sequence to sequence models](./pics/seq2seq.jpg)
+
+However, the explained approach can be improved:
+
+- We can use **beam search**: the decoder outputs in each step probabilities for all possible words; thus, we can consider several branches of possible sentences, instead of taking one word at a time (aka. *greedy search#*). Since the selected word conditions the next output, it is important which word we select. Beam search consists in performing a more complex selection that considers several options, which lead to several sentences.
+- Instead of passing the final hidden state from the encoder, we can pass all the intermediate hidden states and apply **attention**. Attention consists in inputing the hidden state which is most similar to the last output. That is achieved, e.g., by measuring the cosine similarity. This is useful in language translation, since the word order in different languages is not the same.
