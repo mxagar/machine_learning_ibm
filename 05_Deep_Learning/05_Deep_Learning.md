@@ -44,7 +44,8 @@ No guarantees
     - [3.6 Popular CNN Architectures](#36-popular-cnn-architectures)
   - [4. Recurrent Neural Networks (RNN)](#4-recurrent-neural-networks-rnn)
     - [4.1 Simple RNN Networks](#41-simple-rnn-networks)
-    - [4.1 Long Short-Term Memory (LSTM) Units](#41-long-short-term-memory-lstm-units)
+    - [4.2 Lab: SimpleRNN](#42-lab-simplernn)
+    - [4.3 Long Short-Term Memory (LSTM) Units](#43-long-short-term-memory-lstm-units)
 
 ## 1. Introduction
 
@@ -570,6 +571,7 @@ model.compile(loss='categorical_crossentropy',
               optimizer=opt,
               metrics=['accuracy'])
 
+# Note that here we pass batch_size and epochs!
 model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=5,
@@ -1100,7 +1102,7 @@ Equivalence with my previous notes:
     y_t = o_i: output at position t/i in sequence
     W_x = U: core RNN, dense layer applied to input
     W_s = W: core RNN, dense layer applied to previous state
-    W_y = V: final dense layer
+    W_y = V: final dense layer (in Keras, we need to do it manually afterwards)
 
 Dimensions
 
@@ -1108,9 +1110,9 @@ Dimensions
     s = dimension of hidden state
     t = dimension of output
 
-    U: r x s
-    W: s x s
-    V: s x t
+    U: r x s -> initialized with kernel_initializer
+    W: s x s -> initialized with recurrent_initializer
+    V: s x t (in Keras, we need to do it manually afterwards)
 
 Notes:
 
@@ -1118,10 +1120,134 @@ Notes:
 - We usually only care about the last output!
 - The backpropagation is done *through time*, thus, the vanishing gradient problem becomes more patent. Therefore, we can't work with very long sequences. A solution to that length limitation are **Long Short-Term Memory (LSTM)** cells, introduced in the next section
 - We usually **pad** and **truncate** sequences to make them of a fixed length.
+- Training is performed with vectors and batches, thus, the input has the shape of `(batch_size, seq_len, vector_size)`.
+- If we use words, these are converted to integers using a dictionary and then an **embedding layer** is defined. The embedding layer converts the integers to word vectors in an embedding space of a fixed dimension. The embedding layer conversion is learnt during training. If desired, we can train the embedding to transform similar words to similar vectors (e.g., as measured by their cosine similarity).
+- **IMPORTANT REMARK**: in Keras, apparently, the mapping `V = W_y` is not done automatically inside the `SimpleRNN`, we need to do it manually with a `Dense()` layer, if desired.
 
+### 4.2 Lab: SimpleRNN
 
-### 4.1 Long Short-Term Memory (LSTM) Units
+In this section, this notebook is explained:
 
-![Unrolled RNN](./pics/LSTMs.png)
+`05g_DEMO_RNN.ipynb`
+
+In it, the IMDB review dataset is loaded using Keras and sentiment analysis is performed using `SimpleRNN()`.
+
+Most important steps:
+
+1. Imports
+2. Load dataset. process, define parameters
+3. Define RNN model
+4. Train and evaluate RNN model
+
+```python
+
+###
+# 1. Imports
+##
+
+#from tensorflow import keras
+#from tensorflow.keras.preprocessing import sequence
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import Dense, Embedding
+#from tensorflow.keras.layers import SimpleRNN
+#from tensorflow.keras.datasets import imdb
+#from tensorflow.keras import initializers
+import keras
+from keras.preprocessing import sequence
+from keras.models import Sequential
+from keras.layers import Dense, Embedding
+from keras.layers import SimpleRNN
+from keras.datasets import imdb
+from keras import initializers
+
+###
+# 2. Load dataset. process, define parameters
+##
+
+max_features = 20000  # This is used in loading the data, picks the most common (max_features) words
+maxlen = 30  # maximum length of a sequence - truncate after this
+batch_size = 32
+
+# Load in the data.
+# The function automatically tokenizes the text into distinct integers
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
+print(len(x_train), 'train sequences')
+print(len(x_test), 'test sequences')
+# 25000 train sequences
+# 25000 test sequences
+
+# This pads (or truncates) the sequences so that they are of the maximum length
+# The length of the sequence is very important:
+# - if too short, we might fail to capture context correctly
+# - if too long, the memory cannot store all the information
+x_train = sequence.pad_sequences(x_train, maxlen=maxlen)
+x_test = sequence.pad_sequences(x_test, maxlen=maxlen)
+print('x_train shape:', x_train.shape)
+print('x_test shape:', x_test.shape)
+
+x_train[123,:]  #Here's what an example sequence looks like
+# array([  219,   141,    35,   221,   956,    54,    13,    16,    11,
+#         2714,    61,   322,   423,    12,    38,    76,    59,  1803,
+#           72,     8, 10508,    23,     5,   967,    12,    38,    85,
+#           62,   358,    99], dtype=int32)
+
+###
+# 3. Define RNN model
+##
+
+rnn_hidden_dim = 5 # dim of hidden state = dim of the output
+word_embedding_dim = 50 # dim of word vectors
+model_rnn = Sequential()
+# Embedding: This layer takes each integer in the sequence
+# and embeds it in a 50-dimensional vector
+model_rnn.add(Embedding(input_dim=max_features, # vocabulary size
+                        output_dim=word_embedding_dim)) # word vector size
+# A SimpleRNN is the recurrent layer model with the mappings U, W, V = W_x, W_s, W_y
+# The hidden state is passed automatically after each step in the sequence
+# The size of the output is the size of the hidden state
+# Usually the last output is taken only
+# The kernel (U = W_x) and recurrent (W = W_s) mappings can be controlled
+# independently for initialization and regularization
+# IMPORTANT REMARK: in Keras, apparently, the mapping V = W_y is not done automatically,
+# we need to do it manually with a Dense() layer
+model_rnn.add(SimpleRNN(units=rnn_hidden_dim, # output size = hidden state size
+                    # U = W_x: input weights: (word_embedding_dim, rnn_hidden_dim) = (50, 5)
+                    kernel_initializer=initializers.RandomNormal(stddev=0.001),
+                    # W = W_s: hidden state weights: (s, s) = (5, 5)
+                    recurrent_initializer=initializers.Identity(gain=1.0),
+                    activation='relu', # also frequent: tanh
+                    input_shape=x_train.shape[1:]))
+
+# Sentiment analysis: sentiment score
+model_rnn.add(Dense(units=1, activation='sigmoid'))
+
+# Note that most of the parameters come from the embedding layer
+model_rnn.summary()
+
+rmsprop = keras.optimizers.RMSprop(lr = .0001)
+
+model_rnn.compile(loss='binary_crossentropy',
+              optimizer=rmsprop,
+              metrics=['accuracy'])
+
+###
+# 4. Train and evaluate RNN model
+##
+
+model_rnn.fit(x_train, y_train,
+          batch_size=batch_size,
+          epochs=10,
+          validation_data=(x_test, y_test))
+
+score, acc = model_rnn.evaluate(x_test, y_test,
+                            batch_size=batch_size)
+print('Test score:', score) # 0.4531511457252502
+print('Test accuracy:', acc) # 0.7853999733924866
+
+```
+
+### 4.3 Long Short-Term Memory (LSTM) Units
+
+![LSTM Unit](./pics/LSTMs.png)
 
 
