@@ -54,6 +54,7 @@ No guarantees
     - [5.1 Variational Autoencoders (VAE)](#51-variational-autoencoders-vae)
       - [Disentangled Variational Autoencoders ($\\beta$-VAE)](#disentangled-variational-autoencoders-beta-vae)
     - [5.2 Lab: Autoencoders](#52-lab-autoencoders)
+    - [5.3 Lab: Autoencoders 2](#53-lab-autoencoders-2)
 
 ## 1. Introduction
 
@@ -1575,7 +1576,7 @@ The main application of variational autoencoders is **image generation**. This i
 
 The loss function has two terms which are summed:
 
-- Reconstruction loss: Pixel-wise difference between input and output vectors/images. MSE can be used (as done with regular autoencoders).
+- Reconstruction loss: Pixel-wise difference between input and output vectors/images. Binary crossentropy can be used (as done with regular autoencoders).
 - Penalty for generating `mu` and `sigma` vectors which are different from `0` and `1`, i.e., we penalize deviations form the **standard distribution**.
 
 In order to penalize deviations from the standard distribution the **Kullback-Leibler (KL)-divergence** is used:
@@ -1594,6 +1595,8 @@ Note that the second term is not strictly necessary: we can also without having 
 
 Interesting video: [Variational Autoencoders by Xavier Steinbrugge](https://www.youtube.com/watch?v=9zKuYvjFFS8).
 
+The nice thing of variational autoencoders is that we can vary the latent sigma values and see how the created images vary according to them. Section [5.2 Lab: Autoencoders](#5.2-Lab:-Autoencoders) has an example.
+
 #### Disentangled Variational Autoencoders ($\beta$-VAE)
 
 Disentangled Variational Autoencoders or beta VAEs are VAEs in which the loss function consisting of the two aforementioned components is weighted: a `beta` factor is multiplied to the KL divergernce (difference of distributions wrt. the Normal).
@@ -1611,4 +1614,220 @@ Some really cool results are shown in the video:
 - Another example is related to face reconstruction: similarly, beta-VAEs are able to reconstruct a very similar face but rotated when the latent variable related to the rotation is altered, leaving the rest fixed. With regural VAEs, changes in a latent variables produced coupled variations.
 
 ### 5.2 Lab: Autoencoders
+
+The notebook
+
+`05h_LAB_Autoencoders.ipynb`
+
+shows shows how the following topics/concepts are implemented:
+
+- Compression/Reconstruction performance of PCA applied on MNIST. Reconstruction performance is measured comparing original and reconstructed images with MSE.
+- Compression/Reconstruction efficacy of Autoencoders applied on MNIST: Number of layers and units are changed to compare different models.
+- Compression/Reconstruction efficacy of Variational Autoencoders applied on MNIST: Number of layers and units are changed to compare different models.
+- The decoder of the Variational Autoencoder is used to generate new MNIST images: the two sigma values are varied and images are reconstructed.
+
+One very interesting thing about the noteboook is that we learn how to use the **functional API** from Keras. That API goes beyond the `Sequential()` models; we can define layers as functions and specify operations with them (e.g., addition, concatenation), as required in more complex models (e.g., ResNets).
+
+Example of how to build an Autoencoder and a Variational Autoencoder using the functional API:
+
+```python
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+import tensorflow as tf
+
+from keras.layers import Lambda, Input, Dense
+from keras.models import Model
+from keras.losses import mse, binary_crossentropy
+from keras.utils import plot_model
+from keras import backend as K
+from keras.datasets import mnist
+
+from sklearn.preprocessing import MinMaxScaler
+
+###
+# Load and prepare dataset
+###
+
+# 60k in train, 10k in test
+(x_train, y_train), (x_test, y_test) = mnist.load_data();
+# Convert to float and scale to [0,1]
+x_train = x_train.astype('float32') / 255.
+x_test = x_test.astype('float32') / 255.
+# Reshape to 1D, i.e., rows of pixels
+x_train_flat = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
+x_test_flat = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
+print(x_train_flat.shape) # (60000, 784)
+print(x_test_flat.shape) # (10000, 784)
+
+# Pixel values scaled again?
+s = MinMaxScaler().fit(x_train_flat)
+x_train_scaled = s.transform(x_train_flat)
+x_test_scaled = s.transform(x_test_flat)
+
+def mse_reconstruction(true, reconstructed):
+    return np.sum(np.power(true - reconstructed, 2) / true.shape[1])
+
+###
+# Autoencoder
+###
+
+# Here the functional API from keras is introduced
+# which helps building more complex architectures, e.g., where
+# layers outputs are summed or concatenated (e.g., ResNets), going
+# beyond the Sequential() API.
+# However, for such simple models as the current,
+# we could use Sequential().
+# In the functional API:
+# - We need to define the Input vector
+# - We need to define all layers as if they are functions with their outputs
+# - We collect first Input instance and last output in Model
+#
+# We need to define 3 models altogether:
+# - full_model
+# - encoder
+# - decoder
+
+ENCODING_DIM = 64
+HIDDEN_DIM = 256
+
+## Encoder model
+inputs = Input(shape=(784,)) # input vector
+# Functional API: layers are like functions that take arguments
+encoder_hidden = Dense(HIDDEN_DIM, activation="relu")(inputs)
+encoded = Dense(ENCODING_DIM, activation="sigmoid")(encoder_hidden)
+# Model: we collect first Input instance and last output in Model
+encoder_model = Model(inputs, encoded, name='encoder')
+
+## Decoder model
+encoded_inputs = Input(shape=(ENCODING_DIM,), name='encoding')
+decoder_hidden = Dense(HIDDEN_DIM, activation="relu")(encoded_inputs)
+reconstruction = Dense(784, activation="sigmoid")(decoder_hidden)
+decoder_model = Model(encoded_inputs, reconstruction, name='decoder')
+
+## Full model as the combination of the two
+outputs = decoder_model(encoder_model(inputs))
+full_model = Model(inputs, outputs, name='full_ae')
+
+full_model.summary()
+
+# We use the BINARY cross-entropy loss
+# because we want to know whether the input and output images are equivalent
+full_model.compile(optimizer='rmsprop',
+                 loss='binary_crossentropy',
+                 metrics=['accuracy'])
+
+## Train
+history = full_model.fit(x_train_scaled,
+                         x_train_scaled,
+                         shuffle=True,
+                         epochs=2,
+                         batch_size=32)
+
+## Evaluate
+decoded_images = full_model.predict(x_test_scaled)
+mse_reconstruction(x_test_flat, decoded_images)
+
+###
+# Variational Autoencoder
+###
+
+def sampling(args):
+    """
+    Transforms parameters defining the latent space into a normal distribution.
+    """
+    # Need to unpack arguments like this because of the way the Keras "Lambda" function works.
+    mu, log_sigma = args
+    # by default, random_normal has mean=0 and std=1.0
+    epsilon = K.random_normal(shape=tf.shape(mu))
+    sigma = K.exp(log_sigma)
+    #return mu + K.exp(0.5 * sigma) * epsilon
+    return mu + sigma*epsilon
+
+hidden_dim = 256
+batch_size = 128
+# this is the dimension of each of the vectors representing the two parameters
+# that will get transformed into a normal distribution
+latent_dim = 2 
+epochs = 1
+
+## VAE model = encoder + decoder
+
+## Encoder model
+inputs = Input(shape=(784, ), name='encoder_input')
+x = Dense(hidden_dim, activation='relu')(inputs)
+# We pass x to two layers in parallel
+z_mean = Dense(latent_dim, name='z_mean')(x)
+z_log_var = Dense(latent_dim, name='z_log_var')(x) # 2D vectors
+
+# We can pass to Lambda our own created function
+z = Lambda(sampling, name='z')([z_mean, z_log_var]) # args unpacked in sampling()
+# z is now one n dimensional vector representing the inputs
+# We'll have the encoder_model output z_mean, z_log_var, and z
+# so we can plot the images as a function of these later
+encoder_model = Model(inputs, [z_mean, z_log_var, z], name='encoder')
+
+## Decoder model
+latent_inputs = Input(shape=(latent_dim,),)
+x = Dense(hidden_dim, activation='relu')(latent_inputs)
+outputs = Dense(784, activation='sigmoid')(x)
+decoder_model = Model(latent_inputs, outputs, name='decoder')
+
+## Instantiate VAE model
+outputs = decoder_model(encoder_model(inputs)[2]) # we take only z!
+vae_model = Model(inputs, outputs, name='vae_mlp')
+
+## Examine layers
+
+for i, layer in enumerate(vae_model.layers):
+    print("Layer", i+1)
+    print("Name", layer.name)
+    print("Input shape", layer.input_shape)
+    print("Output shape", layer.output_shape)
+    if not layer.weights:
+        print("No weights for this layer")
+        continue
+    for i, weight in enumerate(layer.weights):
+        print("Weights", i+1)
+        print("Name", weight.name)
+        print("Weights shape:", weight.shape.as_list())
+
+## Loss function
+
+# Reconstruction
+reconstruction_loss = binary_crossentropy(inputs, outputs)
+reconstruction_loss *= 784
+
+# KL-Divergence
+kl_loss = 0.5 * (K.exp(z_log_var) - (1 + z_log_var) + K.square(z_mean))
+kl_loss = K.sum(kl_loss, axis=-1)
+total_vae_loss = K.mean(reconstruction_loss + kl_loss)
+
+# We can pass our custom loss function with add_loss()
+vae_model.add_loss(total_vae_loss)
+
+vae_model.compile(optimizer='rmsprop',
+                  metrics=['accuracy'])
+    
+vae_model.summary()
+
+## Train
+vae_model.fit(x_train_scaled,
+        epochs=epochs,
+        batch_size=batch_size)
+
+## Evaluate: Generate reconstructed images and compare to original ones
+decoded_images = vae_model.predict(x_test_scaled)
+mse_reconstruction(x_test_scaled, decoded_images)
+
+```
+
+### 5.3 Lab: Autoencoders 2
+
+Another nice example on autoencoders is given in the notebook:
+
+`19_09_2_Keras_Autoencoders_Image_Denoising_MNIST.ipynb`
+
+In it, an autoencoder is built to de-noise MNIST images. The notebook comes originally from J.M. Portilla's course on Tensorflow 2.
 
