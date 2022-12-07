@@ -47,7 +47,13 @@ No guarantees
     - [4.2 Lab: SimpleRNN](#42-lab-simplernn)
     - [4.3 Long Short-Term Memory (LSTM) Units](#43-long-short-term-memory-lstm-units)
       - [Gated Recurrent Units (GRUs)](#gated-recurrent-units-grus)
-    - [4.4 Sequence to Sequence Models: Seq2Seq](#44-sequence-to-sequence-models-seq2seq)
+    - [4.4 RNN Architectures](#44-rnn-architectures)
+      - [Sequence to Sequence Models: Seq2Seq](#sequence-to-sequence-models-seq2seq)
+    - [4.5 Times Series](#45-times-series)
+  - [5. Autoencoders](#5-autoencoders)
+    - [5.1 Variational Autoencoders (VAE)](#51-variational-autoencoders-vae)
+      - [Disentangled Variational Autoencoders ($\\beta$-VAE)](#disentangled-variational-autoencoders-beta-vae)
+    - [5.2 Lab: Autoencoders](#52-lab-autoencoders)
 
 ## 1. Introduction
 
@@ -1184,8 +1190,8 @@ print(len(x_test), 'test sequences')
 # - if too long, the memory cannot store all the information
 x_train = sequence.pad_sequences(x_train, maxlen=maxlen)
 x_test = sequence.pad_sequences(x_test, maxlen=maxlen)
-print('x_train shape:', x_train.shape)
-print('x_test shape:', x_test.shape)
+print('x_train shape:', x_train.shape) # (25000, 30)
+print('x_test shape:', x_test.shape) # (25000, 30)
 
 x_train[123,:]  #Here's what an example sequence looks like
 # array([  219,   141,    35,   221,   956,    54,    13,    16,    11,
@@ -1218,7 +1224,7 @@ model_rnn.add(SimpleRNN(units=rnn_hidden_dim, # output size = hidden state size
                     # W = W_s: hidden state weights: (s, s) = (5, 5)
                     recurrent_initializer=initializers.Identity(gain=1.0),
                     activation='relu', # also frequent: tanh
-                    input_shape=x_train.shape[1:]))
+                    input_shape=x_train.shape[1:])) # (30,)
 
 # Sentiment analysis: sentiment score
 model_rnn.add(Dense(units=1, activation='sigmoid'))
@@ -1262,15 +1268,39 @@ The math is in reality not very complex: we apply several sensible operations to
 - Activation with `tanh` and `sigmoid`
 - etc.
 
-However, the key aspect is summarized by the following picture/model:
+However, the key aspects of how LSTMs work are summarized by the following picture/model:
 
 ![LSTM Unit](./pics/LSTMs.png)
 
 More information can be found in my DL notes: [deep_learning_udacity](https://github.com/mxagar/deep_learning_udacity)
 
-In practice, we
+In practice, we can easily interchange the `SimpleRNN()` and the `LSTM()` layers, because for the user the have a very similar API:
 
 ```python
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense,SimpleRNN,LSTM
+
+### SimpleRNN
+
+n_features = 1 # size of a vector; in this case the vector is a scalar
+length = 50 # length of vector sequence
+
+model = Sequential()
+model.add(SimpleRNN(units=100, input_shape=(length,n_features)))
+model.add(Dense(n_features)) # Unique vector output
+
+model.compile(optimizer='adam',loss='mse')
+
+### LSTM
+
+n_features = 1 # size of a vector; in this case the vector is a scalar
+length = 50 # length of vector sequence
+
+model = Sequential()
+model.add(LSTM(units=100, input_shape=(length,n_features)))
+model.add(Dense(n_features)) # Unique vector output
+
+model.compile(optimizer='adam',loss='mse')
 
 ```
 
@@ -1280,7 +1310,15 @@ They appeared in 2014. They are a simplification of the LSTM cell which is maybe
 
 We can easily interchange them both; maybe LSTMs are able to learn more complex patterns and GRUs are suited for smaller datasets.
 
-### 4.4 Sequence to Sequence Models: Seq2Seq
+### 4.4 RNN Architectures
+
+We can arrange RNN cells in different ways:
+
+- **Sequence-to-vector** (aka. *many to one*): we pass a sequence and expect an element. For example, we can use that architecture to generate text or forecast the next value. The *one* element is in general a vector, but if that vector is of size `1`, it's a scalar; e.g., in price forecasting we predict one price value.
+- **Vector-to-sequence** (aka. *one to many*): for instance, given a word, predict the next 5. That *one* vector can be a scalar, too, as before.
+- **Sequence-to-sequence** (aka. *many to many*): we pass a sequence and expect a sequence. For example, we could train a chatbot with Q-A sequences or perform machine translation.
+
+#### Sequence to Sequence Models: Seq2Seq
 
 Sequence to sequence models can be used for instance in machine translation. They have an **encoder-decoder** architecture:
 
@@ -1297,3 +1335,280 @@ However, the explained approach can be improved:
 
 - We can use **beam search**: the decoder outputs in each step probabilities for all possible words; thus, we can consider several branches of possible sentences, instead of taking one word at a time (aka. *greedy search#*). Since the selected word conditions the next output, it is important which word we select. Beam search consists in performing a more complex selection that considers several options, which lead to several sentences.
 - Instead of passing the final hidden state from the encoder, we can pass all the intermediate hidden states and apply **attention**. Attention consists in inputing the hidden state which is most similar to the last output. That is achieved, e.g., by measuring the cosine similarity. This is useful in language translation, since the word order in different languages is not the same.
+
+### 4.5 Times Series
+
+Time series can be performed with a *many-to-one* architecture, but several aspects should be taken into account:
+
+- The sequence length must capture the trend and the seasonality, i.e., the low and high frequency components of the series.
+- We should apply early stopping.
+- Dates need to be converted to `datetime`, probably.
+- The class `TimeseriesGenerator` is very helpful to generate sequences from a time series.
+
+The following example is from the notebook
+
+`19_07_2_RNN_Example_1_Sales.ipynb`
+
+which originally comes from J.M. Portilla's course on Tensforlow 2. The example works on a time series downloaded from the FRED website: [Retail Sales: Clothing and Clothing Accessory Stores (Not Seasonally Adjusted)](https://fred.stlouisfed.org/series/RSCCASN). It consists of 334 entries of monthly date-sales pairs. It is a very simple dataset, but the example shows how to deal with a time series in general.
+
+These steps are carried out:
+
+1. Imports
+2. Load dataset and prepare
+3. Generator
+4. Define the model
+5. Train the model
+6. Forecasting: Test Split + Future (New Timestamps)
+
+```python
+###
+# 1. Imports
+###
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+
+###
+# 2. Load dataset and prepare
+###
+
+# We load the dataset
+# We convert the date string to datetime type on the fly
+# and be set that column to be the index
+# If we have datetime values, we can use
+# - parse_dates=True, or
+# - infer_datetime_format=True
+df = pd.read_csv('./RSCCASN.csv', parse_dates=True, index_col='DATE')
+df.shape # (334, 1)
+
+# We change the name of the column so that it's easier to remember
+# Note that it contains sales in millions by day
+df.columns = ['Sales']
+
+# We can see that a year (12 months or data points) y a cycle or period
+# which contains the major trend and a seasonality components.
+# Thus, we need to take that time span into consideration for splitting
+df.plot(figsize=(16,6))
+
+# Train/Test Split
+# Due to the observation above,
+# we split in the last 1.5 years = 18 months
+test_size = 18
+test_ind = len(df) - test_size
+train = df.iloc[:test_ind]
+test = df.iloc[test_ind:]
+
+# Scaling
+scaler = MinMaxScaler()
+scaler.fit(train)
+scaled_train = scaler.transform(train)
+scaled_test = scaler.transform(test)
+
+###
+# 3. Generator
+###
+
+# Time series generator
+from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
+
+# The length of the input series must be smaller than the length of the test split
+# if we do early-stopping validation
+length = 12
+batch_size = 1
+generator = TimeseriesGenerator(data=scaled_train,
+                                targets=scaled_train,
+                                length=length,
+                                batch_size=batch_size)
+
+# We check the first (X,y) pair of the generator
+X,y = generator[0]
+X.shape # (1, 12, 1)
+y.shape # (1, 1)
+
+###
+# 4. Define the model
+###
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, SimpleRNN, LSTM
+
+n_features = 1
+model = Sequential()
+#model.add(SimpleRNN(units=100, input_shape=(length,n_features)))
+# We explicitly use the ReLu activation
+model.add(LSTM(units=100, activation='relu', input_shape=(length,n_features)))
+model.add(Dense(n_features))
+model.compile(optimizer='adam', loss='mse')
+
+# Early Stopping
+from tensorflow.keras.callbacks import EarlyStopping
+
+early_stop = EarlyStopping(monitor='val_loss', patience=5)
+# We need to create a validation generator
+# The length is the same as before,
+# taking into account that it must be shorter than the length of the validation split
+validation_generator = TimeseriesGenerator(scaled_test,
+                                          scaled_test,
+                                          length=length,
+                                          batch_size=1)
+
+###
+# 5. Train the model
+###
+
+# We train with an early stop callback
+model.fit_generator(generator,
+                    epochs=20,
+                    validation_data=validation_generator,
+                    callbacks=[early_stop])
+
+# We get the loss values and plot them
+losses = pd.DataFrame(model.history.history)
+losses.plot()
+
+###
+# 6. Forecasting
+###
+
+### 6.1 Test Split
+
+# We forecast one by one all the values in the test split
+# For that, the batch previous to the test split is taken
+# a prediction done for it, and then,
+# the batch is moved in time to contain predicted values
+test_predictions = []
+current_batch = scaled_train[-length:].reshape((1,length,n_features))
+for i in range(len(test)):
+    predicted = model.predict(current_batch)[0]
+    test_predictions.append(predicted)
+    current_batch = np.append(current_batch[:,1:,:],[[predicted]],axis=1)
+
+true_predictions = scaler.inverse_transform(test_predictions)
+test['LSTM Predictions'] = true_predictions
+
+test.plot(figsize=(10,5))
+
+# Compute the RMSE
+from sklearn.metrics import mean_squared_error
+
+np.sqrt(mean_squared_error(test['Sales'],test['LSTM Predictions']))
+
+### 6.2 Future: New Timestamps
+
+scaled_full_data = scaler.transform(df)
+
+forecast = []
+periods_into_future = 24
+current_batch = scaled_full_data[-length:].reshape((1,length,n_features))
+for i in range(periods_into_future):
+    predicted = model.predict(current_batch)[0]
+    forecast.append(predicted)
+    current_batch = np.append(current_batch[:,1:,:],[[predicted]],axis=1)
+
+# We inverse the scaling
+forecast = scaler.inverse_transform(forecast)
+
+# Pick last date: 2019-10-01
+df.tail()
+
+# Since we finish on 2019-10-01 with stapsize of 1 month in our full dataset
+# we take the next day as start day and the frequency tring 'MS' for monthly data
+# More on freq strings: google("pandas frequency strings")
+# https://stackoverflow.com/questions/35339139/what-values-are-valid-in-pandas-freq-tags
+forecast_index = pd.date_range(start='2019-11-01',
+                               periods=periods_into_future,
+                               freq='MS')
+
+# Create a dataframe
+forecast_df = pd.DataFrame(forecast,index=forecast_index)
+forecast_df.columns = ['Sales']
+
+# Plot
+ax = df.plot(figsize=(16,6))
+forecast_df.plot(ax=ax)
+# We can zooom in if desired
+plt.xlim('2018-01-01','2021-02-01')
+```
+
+## 5. Autoencoders
+
+PCA can find compressed representations of data, e.g., images. We can use those representations to detect anomalies/defects, reduce noise, remove background, etc.
+
+However, PCA is a **linear** combination of principal elements/components which capture the vectors with maximum variance. In contrast, we might have non-linear relationships between basic components. That can be accomplished with autoencoders.
+
+Autoencoders have these parts:
+
+- Encoder: layers that compress the dimensionality of the input vector to a **compressed** or **latent representation**, also known as **bottleneck**.
+- Decoder: layers that upscale the compressed or latent representation to a vector of the dimension as the input.
+
+For training, the loss is defined as the difference between the input and output vectors; then, the gradient of that loss is propagated through the entire network (encoder + decoder).
+
+Autoencoders can be:
+
+- Deep: we have many layers
+- Not deep: a single layer for the encoder/decoder
+- Sparse: only some nodes fire; these have been shown to be successful in recommender systems.
+
+Applications of autoencoders:
+
+- Compress data, dimensionality reduction
+- Noise reduction in data, e.g., images
+- Sharpening of images/data
+- Identifying key components
+- Anomaly detection
+- Similarity: we can find similar images by checking their compressed representation vectors, e.g., with cosine similarity.
+- Machine translation: we reduce dimensionality and improve the translation process (machine translation has typically a high dimensionality).
+- Generation of data, e.g., images. However, typically **variational autoencoders** are used and often **GANs** are superior.
+- Neural inpainting: if we remove a part from an image, we can reconstruct it (e.g., remove watermarks).
+
+### 5.1 Variational Autoencoders (VAE)
+
+Variational autoencoders work the same way as regular autoencoders, except the latent space contains normal distributions instead of scalar values, i.e., the parameters (mean and std. deviation) of distributions are obtained. Then, the decoder samples those distributions and upscales them.
+
+The main application of variational autoencoders is **image generation**. This is the workflow:
+
+- We compress an image to latent vectors: `mu = [m1, m2, ...]` and `sigma = [s1, s2, ...]`.
+- We create a latent representation with noise as follows: `x = mu + sigma*noise`; `noise = N(0,1)`
+- We feed `x` to the decoder, which upscales it to be an image.
+
+The loss function has two terms which are summed:
+
+- Reconstruction loss: Pixel-wise difference between input and output vectors/images. MSE can be used (as done with regular autoencoders).
+- Penalty for generating `mu` and `sigma` vectors which are different from `0` and `1`, i.e., we penalize deviations form the **standard distribution**.
+
+In order to penalize deviations from the standard distribution the **Kullback-Leibler (KL)-divergence** is used:
+
+    mu <-> 0
+    log(sigma) <-> 0 (log 1 = 0); sigma > 0
+
+The KL divergence formula (loss function term):
+
+$$ \frac{1}{2} (e ^{log(\sigma)} - (log(\sigma) + 1) + \mu^2)$$
+
+Note that the second term is not strictly necessary: we can also without having the penalization of the divergence from the standard distribution. However, this term makes possible
+
+- to compare similar images more easily, since close vectors generate similar outputs
+- and to produce new digits by varying the `mu` vector uniformly.
+
+Interesting video: [Variational Autoencoders by Xavier Steinbrugge](https://www.youtube.com/watch?v=9zKuYvjFFS8).
+
+#### Disentangled Variational Autoencoders ($\beta$-VAE)
+
+Disentangled Variational Autoencoders or beta VAEs are VAEs in which the loss function consisting of the two aforementioned components is weighted: a `beta` factor is multiplied to the KL divergernce (difference of distributions wrt. the Normal).
+
+The consequence is very impressive! As we increase the value of `beta`:
+
+- Some latent distributions end up converging to `N(0,1)`, so no information is conveyed by them, in other words, they can be ignored and we remain with the rest! Therefore, **the set of latent neurons in the bottleneck is minimized to the minimum**; even though we did not know at the beginning which number of neurons to take, the network itself finds it out.
+- Not only that, **the different latent values tend to become uncorrelated, compared to regular VAEs**: modifying each of them causes distinct independent changes in the output.
+
+However, note that too high `beta` values compress too much the information and we loose details; we need to define where our trade-off is. Often in Reinforcement Learning we want to compress the information space that much.
+
+Some really cool results are shown in the video:
+
+- Deep-Mind compresses some game images to latent variables with beta-VAEs; then, those latent values are changed and the image is reconstructed. The result is that each latent variable maps to concrete independent events in the scene: floor color changes, agent rotates, etc. With a regular VAE, changes in the latent values yield coupled changes.
+- Another example is related to face reconstruction: similarly, beta-VAEs are able to reconstruct a very similar face but rotated when the latent variable related to the rotation is altered, leaving the rest fixed. With regural VAEs, changes in a latent variables produced coupled variations.
+
+### 5.2 Lab: Autoencoders
+
