@@ -55,6 +55,8 @@ No guarantees
       - [Disentangled Variational Autoencoders ($\\beta$-VAE)](#disentangled-variational-autoencoders-beta-vae)
     - [5.2 Lab: Autoencoders](#52-lab-autoencoders)
     - [5.3 Lab: Autoencoders 2](#53-lab-autoencoders-2)
+  - [6. Generative Adversarial Networks](#6-generative-adversarial-networks)
+  - [7. Reinforcement Learning](#7-reinforcement-learning)
 
 ## 1. Introduction
 
@@ -1830,4 +1832,31 @@ Another nice example on autoencoders is given in the notebook:
 `19_09_2_Keras_Autoencoders_Image_Denoising_MNIST.ipynb`
 
 In it, an autoencoder is built to de-noise MNIST images. The notebook comes originally from J.M. Portilla's course on Tensorflow 2.
+
+## 6. Generative Adversarial Networks
+
+:warning: This section is very brief; I took few notes. Please check my notes in [deep_learning_udacity](https://github.com/mxagar/deep_learning_udacity) for deeper insights.
+
+- We have two networks trained simultaneously: Generator & Discriminator: `G(), D()`.
+- Discriminator: it tries to classify between fake and real images/data samples: `D(x)`.
+- Generator creates new images/samples from a noise vector `z`; it tries to fool the Discriminator: `x = G(z)`.
+- Both fake and real images/data samples are used during training.
+- The loss of the discriminator is backpropagated to the Generator.
+- For training the Discriminator real labels are used; for training the Generator, we use the flipped/opposite labels on the `D()` output and backpropagate them back to the Generator; only the weights of `G()` are updated.
+- Police-counterfeiter metaphor.
+
+GANs are very sensible to the chosen hyperparameters; we need to take into account that we're training two **adversarial** networks and we need to keep the balance all the time so that none becomes significantly much better than the other!
+
+Two notebooks in which a GAN and a DCGAN are implemented on the MNIST dataset:
+
+- [`19_10_1_Keras_GANs_Intro_MNIST.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/19_10_1_Keras_GANs_Intro_MNIST.ipynb)
+- [`19_10_2_Keras_GANs_DCGAN_MNIST.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/19_10_2_Keras_GANs_DCGAN_MNIST.ipynb)
+
+The notebooks come originally from J.M. Portilla's course on Tensorflow 2.
+
+## 7. Reinforcement Learning
+
+:warning: This section is very brief; I took few notes. Please check my notes in [data_science_python_tools](https://github.com/mxagar/data_science_python_tools) for deeper insights. In particular, the folder [`24_ReinforcementLearning`](https://github.com/mxagar/data_science_python_tools/tree/main/24_ReinforcementLearning) contains a guide: [`ReinforcementLearning_Guide.md`](https://github.com/mxagar/data_science_python_tools/blob/main/24_ReinforcementLearning/ReinforcementLearning_Guide.md).
+
+
 
