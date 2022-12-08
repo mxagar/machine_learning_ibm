@@ -212,7 +212,7 @@ See also: [keras/losses](https://www.tensorflow.org/api_docs/python/tf/keras/los
 
 In this section, the following notebook is shown, which introduces how the workflow and calls in Tensorflow/Keras work:
 
-`05d_LAB_Keras_Intro.ipynb`
+[`05d_LAB_Keras_Intro.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/05d_LAB_Keras_Intro.ipynb)
 
 The [Diabetes Dataset](https://archive.ics.uci.edu/ml/datasets/diabetes) is used and a random forest is compared to a very simple neural network.
 
@@ -436,7 +436,7 @@ Another important layer in CNNs: **Pooling**: Pooling reduces image size by mapp
 
 In this section, this notebook is explained:
 
-`05e_DEMO_CNN.ipynb`
+[`05e_DEMO_CNN.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/05e_DEMO_CNN.ipynb)
 
 In it, the [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset is used, which consists of 60000 32x32 color images in 10 classes, with 6000 images per class. There are 50000 training images and 10000 test images. Check the current [performance results here](http://rodrigob.github.io/are_we_there_yet/build/classification_datasets_results.html).
 
@@ -622,7 +622,7 @@ print(accuracy_score(y_true, y_pred))
 
 In this section, this notebook is explained:
 
-`05f_DEMO_Transfer_Learning.ipynb`
+[`05f_DEMO_Transfer_Learning.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/05f_DEMO_Transfer_Learning.ipynb)
 
 In it, the MNIST dataset is used. First, a model is trained with the digits `0-4`; then, we freeze the *feature layer* weights and apply transfer learning to the model in which only the *classifier layers* are re-trained with the digits `5-9`. The training is faster because we train only the classifier.
 
@@ -1139,7 +1139,7 @@ Notes:
 
 In this section, this notebook is explained:
 
-`05g_DEMO_RNN.ipynb`
+[`05g_DEMO_RNN.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/05g_DEMO_RNN.ipynb)
 
 In it, the IMDB review dataset is loaded using Keras and sentiment analysis is performed using `SimpleRNN()`.
 
@@ -1350,7 +1350,8 @@ Time series can be performed with a *many-to-one* architecture, but several aspe
 
 The following example is from the notebook
 
-`19_07_2_RNN_Example_1_Sales.ipynb`
+[`19_07_2_RNN_Example_1_Sales.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/19_07_2_RNN_Example_1_Sales.ipynb)
+
 
 which originally comes from J.M. Portilla's course on Tensforlow 2. The example works on a time series downloaded from the FRED website: [Retail Sales: Clothing and Clothing Accessory Stores (Not Seasonally Adjusted)](https://fred.stlouisfed.org/series/RSCCASN). It consists of 334 entries of monthly date-sales pairs. It is a very simple dataset, but the example shows how to deal with a time series in general.
 
@@ -1619,7 +1620,7 @@ Some really cool results are shown in the video:
 
 The notebook
 
-`05h_LAB_Autoencoders.ipynb`
+[`05h_LAB_Autoencoders.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/05h_LAB_Autoencoders.ipynb)
 
 shows shows how the following topics/concepts are implemented:
 
@@ -1829,7 +1830,7 @@ mse_reconstruction(x_test_scaled, decoded_images)
 
 Another nice example on autoencoders is given in the notebook:
 
-`19_09_2_Keras_Autoencoders_Image_Denoising_MNIST.ipynb`
+[`19_09_2_Keras_Autoencoders_Image_Denoising_MNIST.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/19_09_2_Keras_Autoencoders_Image_Denoising_MNIST.ipynb)
 
 In it, an autoencoder is built to de-noise MNIST images. The notebook comes originally from J.M. Portilla's course on Tensorflow 2.
 
@@ -1858,5 +1859,196 @@ The notebooks come originally from J.M. Portilla's course on Tensorflow 2.
 
 :warning: This section is very brief; I took few notes. Please check my notes in [data_science_python_tools](https://github.com/mxagar/data_science_python_tools) for deeper insights. In particular, the folder [`24_ReinforcementLearning`](https://github.com/mxagar/data_science_python_tools/tree/main/24_ReinforcementLearning) contains a guide: [`ReinforcementLearning_Guide.md`](https://github.com/mxagar/data_science_python_tools/blob/main/24_ReinforcementLearning/ReinforcementLearning_Guide.md).
 
+Key concepts:
 
+- **Agents** interact with **Environments**.
+- Agents choose from a set of available **Actions**.
+- The Actions impact the Environment with a change in the Agent's **State**, which impacts the Agents via **Rewards**.
+- Rewards are generally unknown and must be estimated by the agent.
+- The process repeats dynamically so that agents learn how to estimate rewards of actions over time.
+- The solution is a **Policy** by which Agents choose Actions in response to their State in the Environment.
 
+Notebook with demo:
+
+[`05i_DEMO_Reinforcement.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/05_Deep_Learning/lab/05i_DEMO_Reinforcement.ipynb)
+
+The notebook has two examples: Frozen Lake and Cart Pole. Both are quite simple and in both the same strategy is applied:
+
+- We play the game taking random actions given our observation/state.
+- We collect the reward and the closeness to the reward for every state-action pair(`X`) taken in many games.
+- Then, a likely/expected reward target is computed (`y`) and we fit a model to the dataset.
+- After that, we can play the game with better outcomes: given an observation/state, instead of taking a random action, we let the model predict the outcomes for every action; then, we take the action which leads to best outcome according to the model.
+
+Frozen lake has a smaller observation space dimension, but more action categories; however, both games are similarly implemented.
+
+In the following, the code for Frozen Lake:
+
+```python
+import gym
+import pandas
+import numpy as np
+
+# Build an environment with gym.make()
+env = gym.make('FrozenLake-v1') # build a fresh environment
+
+# Get information on the game/environment
+# Also check the website: https://www.gymlibrary.dev/environments/toy_text/frozen_lake/
+# Observation/state: cell number 0-15
+# Action space:
+# 0: LEFT, 1: DOWN, 2: RIGHT, 3: UP
+# Reward: +1 if we reach goal, 0 else; game ends at goal or at hole
+env.env?
+
+# Start a new game with env.reset()
+current_observation = env.reset() # this starts a new "episode" and returns the initial observation
+
+# the current observation is just the current location
+print(current_observation) # observations are just a number
+
+# we can print the environment if we want to look at it
+env.render() 
+
+###
+# Collect the data
+###
+
+import gym
+import pandas
+import numpy as np
+
+env = gym.make('FrozenLake-v1')
+
+num_episodes = 40000
+
+life_memory = []
+# 1 episode = 1 game
+for i in range(num_episodes):
+    
+    # start a new episode and record all the memories
+    old_observation = env.reset()
+    done = False
+    tot_reward = 0
+    ep_memory = []
+    # loop action steps until Hole / Goal
+    while not done:
+        # random action
+        new_action = env.action_space.sample()
+        # make step with action, collect
+        # - observation = state
+        # - reward = 0 if not goal, 1 if goal
+        # - done = True if hole/goal, False else
+        observation, reward, done, info = env.step(new_action)
+        tot_reward += reward
+        
+        ep_memory.append({
+            "observation": old_observation,
+            "action": new_action,
+            "reward": reward,
+            "episode": i,
+        })
+        old_observation = observation
+        
+    # incorporate total reward
+    num_steps = len(ep_memory)
+    for i, ep_mem in enumerate(ep_memory):
+        # If goal was reached, tot_reward = 1, 0 else
+        ep_mem["tot_reward"] = tot_reward
+        # If goal was reached, linear decay from tot_reward to 0, 0 else
+        # We weight our steps according to how close we were to the goal
+        ep_mem["decay_reward"] = i*tot_reward/num_steps
+    
+    # Extend: add dictionaries to the list without nesting
+    life_memory.extend(ep_memory)
+    
+memory_df = pandas.DataFrame(life_memory)
+
+memory_df.shape # (305121, 6)
+
+# We take one episode with tot_reward = 1, e.g., episode = 1
+# We see that:
+# - reward is 0 until the last observation, where it becomes 1
+# - decay_reward increases linearly from 0 to reward wuth the number of steps
+memory_df[memory_df.episode == 1]
+
+# Percentage of games in which we reached the goal: 1-2%
+memory_df.groupby("episode").reward.sum().mean() # 0.013525
+
+###
+# Fit model and predict best action
+###
+
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
+from sklearn.svm import SVR
+
+# The dataset we have collected helps us build a model
+# which can predict the expected total reward if we take an action
+# given our observation/state.
+# That way, instead of taking random actions, we can take actions
+# that likely would maximize our reward.
+model = RandomForestRegressor()
+#model = ExtraTreesRegressor(n_estimators=50)
+#model = SVR()
+# The target value is related to the total reward, but recall we have 3 values:
+# - reward: it will be 0 if not reached the goal
+# - tot_reward: it will be 1 if in the episode/game we reached the goal, independently of the current action
+# - decay_reward: it will be closer to tot_reward if the state is closer to the goal.
+# We define the following linear combination:
+y = 1*memory_df.reward + memory_df.tot_reward + .1*memory_df.decay_reward
+#y = 0.5*memory_df.reward + 0.1*memory_df.decay_reward + memory_df.tot_reward
+x = memory_df[["observation", "action"]]
+model.fit(x, y)
+
+num_episodes = 500
+# We can explore/exploit
+# - exploit: let the model predict the action with the highest y (i.e., expected reward)
+# - explore: takee a random action and see what happens
+# Obviously, we should record again all data to extend our dataset and improve the model!
+random_per = 0.01 # % of times we want to explore vs exploit
+
+life_memory = []
+for i in range(num_episodes):
+    
+    # start a new episode and record all the memories
+    old_observation = env.reset()
+    done = False
+    tot_reward = 0
+    ep_memory = []
+    while not done:
+        # Random uniform distribution [0,1)
+        # If value below threshold, we take random action: explore
+        # Else: exploit
+        if np.random.rand() < random_per:
+            new_action = env.action_space.sample()
+        else:
+            # Exploit
+            # We compose all state-action pairs given our observation/state
+            pred_in = [[old_observation,i] for i in range(4)]
+            # We predict y for all pairs and take the action which maximizes y
+            new_action = np.argmax(model.predict(pred_in))
+        # Take action step
+        observation, reward, done, info = env.step(new_action)
+        
+        # Record all the data, as before
+        tot_reward += reward
+        ep_memory.append({
+            "observation": old_observation,
+            "action": new_action,
+            "reward": reward,
+            "episode": i,
+        })
+        old_observation = observation
+        
+    # Incorporate total reward
+    for ep_mem in ep_memory:
+        ep_mem["tot_reward"] = tot_reward
+        
+    life_memory.extend(ep_memory)
+    
+memory_df2 = pandas.DataFrame(life_memory)
+
+# rf.fit(memory_df[["observation", "action"]], memory_df["comb_reward"])
+
+# Percentage of games in which we reach the goal: much better! 47%
+memory_df2.groupby("episode").reward.sum().mean() # 0.472
+
+```
