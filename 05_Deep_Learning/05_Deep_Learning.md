@@ -57,6 +57,7 @@ No guarantees
     - [5.3 Lab: Autoencoders 2](#53-lab-autoencoders-2)
   - [6. Generative Adversarial Networks](#6-generative-adversarial-networks)
   - [7. Reinforcement Learning](#7-reinforcement-learning)
+  - [8. Project](#8-project)
 
 ## 1. Introduction
 
@@ -2052,3 +2053,18 @@ memory_df2 = pandas.DataFrame(life_memory)
 memory_df2.groupby("episode").reward.sum().mean() # 0.472
 
 ```
+
+## 8. Project
+
+Requirements:
+
+- Submit report as a PDF.
+- Deep learning model for any task we select, using the dataset of our choice.
+- Describe the dataset.
+- Explain main objectives: problem type, goals.
+- Describe briefly: data exploration, cleaning, feature engineering.
+- Variations of a deep learning model: at least 3; different hyperparameters, etc.
+- Explain model recommendation: choose explainability / accuracy?
+- Explain key findings.
+- Next steps: issues, improvements, etc.
+
