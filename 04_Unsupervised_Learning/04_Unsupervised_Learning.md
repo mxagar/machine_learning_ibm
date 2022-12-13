@@ -9,7 +9,7 @@ The Specialization is divided in 6 courses, and each of them has its own folder 
 3. [Supervised Machine Learning: Classification](https://www.coursera.org/learn/supervised-machine-learning-classification?specialization=ibm-machine-learning)
 4. [Unsupervised Machine Learning](https://www.coursera.org/learn/ibm-unsupervised-machine-learning?specialization=ibm-machine-learning)
 5. [Deep Learning and Reinforcement Learning](https://www.coursera.org/learn/deep-learning-reinforcement-learning?specialization=ibm-machine-learning)
-6. [Specialized Models: Time Series and Survival Analysis](https://www.coursera.org/learn/time-series-survival-analysis?specialization=ibm-machine-learning)
+6. [Machine Learning Capstone: Deployment of a Recommender System](https://www.coursera.org/learn/machine-learning-capstone?specialization=ibm-machine-learning)
 
 This file focuses on the **fourth course: Unsupervised Machine Learning**
 
@@ -77,7 +77,9 @@ No guarantees
     - [8.4 Python Lab: NNMF for Text Topic Discovery](#84-python-lab-nnmf-for-text-topic-discovery)
     - [8.5 Python Lab: NLP Feature Extraction](#85-python-lab-nlp-feature-extraction)
     - [8.6 Python Lab: NMF for Image Decomposition](#86-python-lab-nmf-for-image-decomposition)
-  - [9. Project:](#9-project)
+  - [9. Project](#9-project)
+    - [Requirements](#requirements)
+    - [Repository](#repository)
 
 ## 1. Introduction to Unsupervised Learning
 
