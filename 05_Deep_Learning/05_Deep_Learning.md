@@ -2056,6 +2056,8 @@ memory_df2.groupby("episode").reward.sum().mean() # 0.472
 
 ## 8. Project
 
+Project repository: [asl_alphabet_image_classification](https://github.com/mxagar/asl_alphabet_image_classification).
+
 Requirements:
 
 - Submit report as a PDF.
@@ -2067,4 +2069,3 @@ Requirements:
 - Explain model recommendation: choose explainability / accuracy?
 - Explain key findings.
 - Next steps: issues, improvements, etc.
-
