@@ -11,7 +11,7 @@ The Specialization is divided in 6 courses, and each of them has its own folder 
 5. [Deep Learning and Reinforcement Learning](https://www.coursera.org/learn/deep-learning-reinforcement-learning?specialization=ibm-machine-learning)
 6. [Machine Learning Capstone: Deployment of a Recommender System](https://www.coursera.org/learn/machine-learning-capstone?specialization=ibm-machine-learning)
 
-This file focuses on the **first course: Exploratory Data Analysis for Machine Learning**
+This file focuses on the **first course: Exploratory Data Analysis for Machine Learning**.
 
 Mikel Sagardia, 2022.  
 No guarantees
