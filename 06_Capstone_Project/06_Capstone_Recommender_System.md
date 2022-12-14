@@ -23,8 +23,76 @@ No guarantees
 - [Deep Learning and Reinforcement Learning](#deep-learning-and-reinforcement-learning)
   - [Table of Contents](#table-of-contents)
   - [1. Introduction](#1-introduction)
-  - [X. Project](#x-project)
+    - [1.1 Introduction to Recommender Systems](#11-introduction-to-recommender-systems)
+    - [1.2 Project Description](#12-project-description)
+  - [2. Exploratory Data Analysis on Online Course Enrollment Data](#2-exploratory-data-analysis-on-online-course-enrollment-data)
+  - [3. Unsupervised-Learning Based Recommender System](#3-unsupervised-learning-based-recommender-system)
+  - [4. Supervised-Learning Based Recommender System](#4-supervised-learning-based-recommender-system)
+  - [5. Deployment and Presentation](#5-deployment-and-presentation)
+  - [6. Project Submission](#6-project-submission)
 
 ## 1. Introduction
 
-## X. Project
+### 1.1 Introduction to Recommender Systems
+
+:warning: For a more theoretical introduction, check my notes in [`ML_Anomaly_Recommender.md`](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md).
+
+Even though people's taste might vary, they follow patterns: they like things of the same category, with similar contents, etc. Recommender systems are everywhere and they suggest us many things based on a model:
+
+- Books to buy.
+- Where to eat.
+- Movies to see.
+- Jobs to apply to.
+- Who to be friends with.
+- News to read.
+- etc.
+
+One could argue that recommender systems are good for the two parties involved in the transaction:
+
+- The service provider, because they sell more.
+- The consumer, because they get more of what they like.
+
+There are two main types of recommender systems:
+
+1. Content-based: "Show me more of the same of what I've liked before".
+   - The system figures out the elements the user likes and tries to find items that share those aspects.
+2. Collaborative Filtering: "Tell me what's popular among my neighbors, I also might like it".
+   - Users are put into groups of similarity, and the items popular in those groups are suggested to the peers that haven't experienced them.
+3. Hybrid: a combination of both.
+
+Implementation can be:
+
+1. Memory-based
+   - Entire user-item dataset used.
+   - Items and users are represented as vectors and their similarities can be compute: cosine, correlation, Euclidean distance, etc.
+2. Model-based
+   - A model of users is developed to learn their preferences.
+   - Models can be anything: regression, classification, clustering, etc.
+
+### 1.2 Project Description
+
+We need to build a recommender system which suggests AI courses to students. The system will be deployed as a Streamlit web app.
+
+The following picture shows the different components of the project:
+
+![Project Workflow](./pics/project_workflow.png)
+
+Tasks:
+
+- Collecting and understanding data
+- EDA
+- Extracting Bag of Words (BoW) features from course textual content
+- Calculating course similarity using BoW features
+- Building content-based recommender systems using various unsupervised learning algorithms, such as: Distance/Similarity measurements, K-means, Principal Component Analysis (PCA), etc.
+- Building collaborative-filtering recommender systems using various supervised learning algorithms: K Nearest Neighbors, Non-negative Matrix Factorization (NMF), Neural Networks, Linear Regression, Logistic Regression, RandomForest, etc.
+- Creating an insightful and informative slideshow and presenting it to your peers
+
+## 2. Exploratory Data Analysis on Online Course Enrollment Data
+
+## 3. Unsupervised-Learning Based Recommender System
+
+## 4. Supervised-Learning Based Recommender System
+
+## 5. Deployment and Presentation
+
+## 6. Project Submission
