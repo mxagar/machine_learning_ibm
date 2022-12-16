@@ -26,12 +26,15 @@ No guarantees
     - [1.1 Introduction to Recommender Systems](#11-introduction-to-recommender-systems)
     - [1.2 Project Description](#12-project-description)
   - [2. Exploratory Data Analysis on Online Course Enrollment Data](#2-exploratory-data-analysis-on-online-course-enrollment-data)
+    - [Download and Analyze Dataset](#download-and-analyze-dataset)
   - [3. Unsupervised-Learning Based Recommender System](#3-unsupervised-learning-based-recommender-system)
   - [4. Supervised-Learning Based Recommender System](#4-supervised-learning-based-recommender-system)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
   - [6. Project Submission](#6-project-submission)
 
 ## 1. Introduction
+
+The notebooks and the code associated to this module and the project are located in [`./lab`](https://github.com/mxagar/machine_learning_ibm/tree/main/06_Capstone_Project/lab).
 
 ### 1.1 Introduction to Recommender Systems
 
@@ -88,6 +91,25 @@ Tasks:
 - Creating an insightful and informative slideshow and presenting it to your peers
 
 ## 2. Exploratory Data Analysis on Online Course Enrollment Data
+
+### Download and Analyze Dataset
+
+Notebook: [`lab_jupyter_eda.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/)
+
+Nothing really new is done in the notebook/exercise.
+
+The dataset consists on two files:
+
+1. `course_genre.csv`: `(307, 16)`: course id, title and binary values of topics covered in each course.
+2. `ratings.csv`: `(233306, 3)`: user id, course id and rating of each course by the user; the rating has only two possible values: `2: enrolled, not finished`, `3: enrolled and finished`.
+
+Steps followed:
+
+- All titles are joined to created a `wordcloud`.
+- Course counts for topics are analyzed: sorted according to counts (popularity of each topic).
+- Users with most enrollments are ranked.
+- Courses with most enrollments are ranked: 20 most popular.
+- A join (`merge()`) is performed to get course names.
 
 ## 3. Unsupervised-Learning Based Recommender System
 
