@@ -1,4 +1,4 @@
-# Deep Learning and Reinforcement Learning
+# Machine Learning Capstone: Deployment of a Recommender System
 
 These are my notes and the code of the [IBM Machine Learning Professional Certificate](https://www.coursera.org/professional-certificates/ibm-machine-learning) offered by IBM & Coursera.
 
@@ -20,7 +20,7 @@ No guarantees
 
 ## Table of Contents
 
-- [Deep Learning and Reinforcement Learning](#deep-learning-and-reinforcement-learning)
+- [Machine Learning Capstone: Deployment of a Recommender System](#machine-learning-capstone-deployment-of-a-recommender-system)
   - [Table of Contents](#table-of-contents)
   - [1. Introduction](#1-introduction)
     - [1.1 Introduction to Recommender Systems](#11-introduction-to-recommender-systems)
