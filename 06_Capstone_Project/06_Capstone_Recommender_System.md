@@ -15,6 +15,8 @@ This file focuses on the **sixth course: Machine Learning Capstone: Deployment o
 
 The goal of this course is to build a project in which a recommender system is implemented trying different machine learning techniques.
 
+**The final project is in the repository [course_recommender_streamlit](https://github.com/mxagar/course_recommender_streamlit).**
+
 Mikel Sagardia, 2022.  
 No guarantees
 
@@ -25,8 +27,9 @@ No guarantees
   - [1. Introduction](#1-introduction)
     - [1.1 Introduction to Recommender Systems](#11-introduction-to-recommender-systems)
     - [1.2 Project Description](#12-project-description)
-  - [2. Exploratory Data Analysis on Online Course Enrollment Data](#2-exploratory-data-analysis-on-online-course-enrollment-data)
-    - [Download and Analyze Dataset](#download-and-analyze-dataset)
+  - [2. Exploratory Data Analysis and Feature Engineering](#2-exploratory-data-analysis-and-feature-engineering)
+    - [2.1 Download and Analyze Dataset: `lab_jupyter_eda.ipynb`](#21-download-and-analyze-dataset-lab_jupyter_edaipynb)
+    - [2.2 Feature Engineering: `lab_jupyter_fe_bow_solution.ipynb`, `lab_jupyter_fe_course_sim_solution.ipynb`](#22-feature-engineering-lab_jupyter_fe_bow_solutionipynb-lab_jupyter_fe_course_sim_solutionipynb)
   - [3. Unsupervised-Learning Based Recommender System](#3-unsupervised-learning-based-recommender-system)
   - [4. Supervised-Learning Based Recommender System](#4-supervised-learning-based-recommender-system)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
@@ -35,6 +38,8 @@ No guarantees
 ## 1. Introduction
 
 The notebooks and the code associated to this module and the project are located in [`./lab`](https://github.com/mxagar/machine_learning_ibm/tree/main/06_Capstone_Project/lab).
+
+**Note that the final project is in the repository [course_recommender_streamlit](https://github.com/mxagar/course_recommender_streamlit).**
 
 ### 1.1 Introduction to Recommender Systems
 
@@ -90,11 +95,11 @@ Tasks:
 - Building collaborative-filtering recommender systems using various supervised learning algorithms: K Nearest Neighbors, Non-negative Matrix Factorization (NMF), Neural Networks, Linear Regression, Logistic Regression, RandomForest, etc.
 - Creating an insightful and informative slideshow and presenting it to your peers
 
-## 2. Exploratory Data Analysis on Online Course Enrollment Data
+## 2. Exploratory Data Analysis and Feature Engineering
 
-### Download and Analyze Dataset
+### 2.1 Download and Analyze Dataset: `lab_jupyter_eda.ipynb`
 
-Notebook: [`lab_jupyter_eda.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/)
+Notebook: [`lab_jupyter_eda.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_eda.ipynb)
 
 Nothing really new is done in the notebook/exercise.
 
@@ -110,6 +115,27 @@ Steps followed:
 - Users with most enrollments are ranked.
 - Courses with most enrollments are ranked: 20 most popular.
 - A join (`merge()`) is performed to get course names.
+
+### 2.2 Feature Engineering: `lab_jupyter_fe_bow_solution.ipynb`, `lab_jupyter_fe_course_sim_solution.ipynb`
+
+New but complementary datasets are presented:
+
+1. `course_processed.csv`: it adds a course description to `course_genre.csv`.
+2. `course_bows.csv`: the result of the first notebook in this section/part: `lab_jupyter_fe_bow_solution.ipynb`.
+
+Notebooks:
+
+- [`lab_jupyter_fe_bow_solution.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_fe_bow_solution.ipynb)
+- [`lab_jupyter_fe_course_sim_solution.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_fe_course_sim_solution.ipynb)
+
+Steps followed:
+
+- Course title and description are merged to form a text field from which features are extracted, i.e., token counts (Bags of Words, BoW).
+- Text field tokenization is performed with NLTK, removing stop words and taking only nouns (after POS tagging).
+- A vocabulary/dictionary is created with gensim.
+- BoWs are created for each course text field, storing them stacked in a dataframe in which each course-token pair has an entry.
+- The created dataframe is pivoted to create sparse BoW entries, one for each course.
+- Similarities between courses are computed: given a course with its BoW sparse array, the most similar ones are found.
 
 ## 3. Unsupervised-Learning Based Recommender System
 
