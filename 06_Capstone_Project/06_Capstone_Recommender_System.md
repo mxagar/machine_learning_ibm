@@ -30,7 +30,16 @@ No guarantees
   - [2. Exploratory Data Analysis and Feature Engineering](#2-exploratory-data-analysis-and-feature-engineering)
     - [2.1 Download and Analyze Dataset: `lab_jupyter_eda.ipynb`](#21-download-and-analyze-dataset-lab_jupyter_edaipynb)
     - [2.2 Feature Engineering: `lab_jupyter_fe_bow_solution.ipynb`, `lab_jupyter_fe_course_sim_solution.ipynb`](#22-feature-engineering-lab_jupyter_fe_bow_solutionipynb-lab_jupyter_fe_course_sim_solutionipynb)
-  - [3. Unsupervised-Learning Based Recommender System](#3-unsupervised-learning-based-recommender-system)
+  - [3. Content-Based Recommender System](#3-content-based-recommender-system)
+    - [3.1 My Notes on Recommender Systems](#31-my-notes-on-recommender-systems)
+      - [Problem definition](#problem-definition)
+      - [Content-Based RecSys](#content-based-recsys)
+      - [Collaborative Filtering RecSys](#collaborative-filtering-recsys)
+    - [3.2 Introduction to Content-Based Recommender Systems](#32-introduction-to-content-based-recommender-systems)
+    - [3.3 Lab Notebooks](#33-lab-notebooks)
+      - [`lab_jupyter_content_user_profile.ipynb`](#lab_jupyter_content_user_profileipynb)
+      - [`lab_jupyter_content_course_similarity.ipynb`](#lab_jupyter_content_course_similarityipynb)
+      - [`lab_jupyter_content_clustering.ipynb`](#lab_jupyter_content_clusteringipynb)
   - [4. Supervised-Learning Based Recommender System](#4-supervised-learning-based-recommender-system)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
   - [6. Project Submission](#6-project-submission)
@@ -43,7 +52,7 @@ The notebooks and the code associated to this module and the project are located
 
 ### 1.1 Introduction to Recommender Systems
 
-:warning: For a more theoretical introduction, check my notes in [`ML_Anomaly_Recommender.md`](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md).
+:warning: For a more theoretical introduction, check my notes in [`ML_Anomaly_Recommender.md`](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md). Also, see section [3.1 My Notes on Recommender Systems](#31-my-notes-on-recommender-systems).
 
 Even though people's taste might vary, they follow patterns: they like things of the same category, with similar contents, etc. Recommender systems are everywhere and they suggest us many things based on a model:
 
@@ -103,10 +112,14 @@ Notebook: [`lab_jupyter_eda.ipynb`](https://github.com/mxagar/machine_learning_i
 
 Nothing really new is done in the notebook/exercise.
 
-The dataset consists on two files:
+The dataset consists on these files:
 
 1. `course_genre.csv`: `(307, 16)`: course id, title and binary values of topics covered in each course.
 2. `ratings.csv`: `(233306, 3)`: user id, course id and rating of each course by the user; the rating has only two possible values: `2: enrolled, not finished`, `3: enrolled and finished`.
+3. `user_profile.csv`: `(33901, 15)`: user id and weight for each course feature for each student. The weights span from 0 to 63, so I understand they are summed/aggregated values for each student, i.e., the accumulated ratings (2 or 3) of the students for each course feature. In other words, these weights seem not to be normalized.
+4. `rs_content_test.csv`: `(9402, 3)`: some test user rating data, consisting of `user` (student id), `item` (`COURSE_ID`), `rating`. Altogether 1000 unique users are contained, so some users have rated some courses.
+
+Other values for ratings would be possible (but not present), e.g.: `1` clicked on it, `0` or `NA` no exposure. It is interesting the fact that we don't use a real rating, but only attendance and completion information. This is very practical, because probably few people rate courses/movies, but we know for all users, who started watching a course/movie, and who finished it.
 
 Steps followed:
 
@@ -137,7 +150,129 @@ Steps followed:
 - The created dataframe is pivoted to create sparse BoW entries, one for each course.
 - Similarities between courses are computed: given a course with its BoW sparse array, the most similar ones are found.
 
-## 3. Unsupervised-Learning Based Recommender System
+## 3. Content-Based Recommender System
+
+### 3.1 My Notes on Recommender Systems
+
+:warning: I prefer the theoretical explanation of [Recommender Systems by Andrew Ng](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md#2-recommender-systems).
+
+After revisiting my notes there, I add a summary here; note that the approach by Ng is different than the approaches explained in later sections.
+
+#### Problem definition
+
+In recommender systems, we usually have **items** (e.g., courses - rows) and **users** (columns). The users rate some items and we'd like to:
+
+- Guess missing ratings
+- Recommend to users items the might like
+
+The fact that one item is similar to another or is liked or not depends on its properties; those properties are the **features**. Depending on whether we know which these properties are or not, the approach of solving the problem can be
+
+1. Content-based: we know the features of the items and their values.
+2. Collaborative-filtering: we obtain the values of the latent features; these features are latent because we don't know which they're, we only know how many we want to have!
+
+The problem is formally described with these variables:
+
+      n_m: number of items
+      n_u: number of users
+      k: number of features
+
+      x^(i): feature vector of item i,
+         i.e., degree of alignment of the item i with each feature k;
+         k (+1) elements
+      theta^(j): importance for each feature k given by the user j,
+         k (+1) elements
+      y^(i,j): real rating of user j to item i
+      r^(i,j): whether user j has rated item i
+
+      y_hat^(i,j) = theta^(j)' * x^(i)
+         predicted rating of user j to item i
+
+      Theta = [theta^(1)'; ...; theta^(n_u)']: n_u x k
+      theta^(j): k x 1
+
+      X = [x^(1)'; ...; x^(n_m)']: n_m x k
+      theta^(j): k x 1
+
+      y^(i,j) ~ y_hat^(i,j) = theta^(i)' * x^(j)
+
+      Y_hat = X * Theta': n_m x n_u
+         this is the estimation of user-movie rating matrix!
+
+#### Content-Based RecSys
+
+In the content-based approach, all `x` vectors are known, i.e., `X` is known: the features of the movies and their values. The goal is to obtain `Theta` so that `Y_hat X * Theta'` is the closes possible to `Y`. That is achieved with a regression optimization in which we get the `Theta` matrix.
+
+In the IBM approach for content-based systems, the methodology is different:
+
+- `X` is known: item features and their values.
+- Users rate *some* items: `y^(i,j)`.
+- Ratings are multiplied to feature vectors: `y^(i,j)*x^(i), for each item i`
+- All resulting multiplications are summed and normalized so that we get the **user profile vector**: the weight each user gives to each feature.
+- The rating of a user to a new item can be estimated by multiplying (dot product) the user profile vectors with the feature vector of the item: the values lies between 0 and 1.
+
+#### Collaborative Filtering RecSys
+
+In collaborative filtering, we only know the size `k`; neither the values from `X` nor `Theta` are known. The goal is to obtain `Theta` and `X` so that `Y_hatX * Theta'` is the closes possible to `Y`. That is achieved with double regression optimization in which we get both `Theta` and `X` values.
+
+In practice, that is done with the **non-negative matrix factorization**.
+
+See my hand-written notes in [Matrix_Factorization.pdf](Matrix_Factorization.pdf).
+
+### 3.2 Introduction to Content-Based Recommender Systems
+
+Content based Recomender Systems try to recommend similar products to users based on their profile; the profile is built with
+
+- user preferences
+- items the user has consumed
+- items the users has seen/clicked on
+
+Thus, the recommendation process is based on the similarity between items; **similarity in content**: category, genre, etc. And the recommendation happens within the user profile.
+
+Example: a user has viewed and voted 3 movies, now we need to suggest which one to watch; all movies have a genres encoded as dummies.
+
+![Content-Based RecSys: Example](./pics/content_based_example.jpg)
+
+To create the **user profile**, the following matrices are created:
+
+- Input user ratings: the rating the user has given to the movies (not all, the available ones).
+- Movies matrix: the one-hot encoded genre properties of the rated movies.
+- Weighted genre matrix: user ratings are multiplied to genre matrix.
+- The user profile is the normalized sum of all values in the weighted matrix along the columns, i.e., it tells us **the importance of each genre/property for the user**.
+
+![Content-Based RecSys: User Profile](./pics/content_based_user_profile.jpg)
+
+To **generate the recommendation rating of each unseen movie**, the user profile is used in conjunction with the one-hot-encoded genres of the (unseen) movies, following these steps:
+
+- The rows of the movies matrix (one-hot values) are multiplied one-by-one by the user profile. That results in the weighted movies matrix.
+- The weights are summed along the rows, i.e., for each unseen movie we get an aggregated value, which is the weighted average or **expected rating** (in the scale 0-1).
+
+![Content-Based RecSys: Recommendation](./pics/content_based_recommendation.jpg)
+
+These kind of Recommender Systems work usually very well, but have a major issue: the user might like movies from a genre which has not been seen in the platform (e.g., drama, as opposed to Sci-Fi). Such movies are undetected. Methods such as **collaborative filtering** can handle those cases.
+
+### 3.3 Lab Notebooks
+
+In this section, 3 notebooks are implemented in sequence:
+
+- [`lab_jupyter_content_user_profile.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_content_user_profile.ipynb)
+- [`lab_jupyter_content_course_similarity.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_content_course_similarity.ipynb)
+- [`lab_jupyter_content_clustering.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_content_clustering.ipynb)
+
+#### `lab_jupyter_content_user_profile.ipynb`
+
+In this notebook, the following content-based recommender system is built:
+
+- We consider that the course-genre weights are known.
+- We have a user profile, i.e., a matrix which contains the weight each user gives to a genre/feature. These weights are not normalized.
+- The rating of a user to a new item can be estimated by multiplying (dot product) the user profile vectors with the feature vector of the item. Since there is no normalization, we call that estimation score.
+
+#### `lab_jupyter_content_course_similarity.ipynb`
+
+
+
+#### `lab_jupyter_content_clustering.ipynb`
+
+
 
 ## 4. Supervised-Learning Based Recommender System
 
