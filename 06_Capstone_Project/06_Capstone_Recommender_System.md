@@ -260,7 +260,7 @@ In this section, 3 notebooks are implemented in sequence:
 
 #### `lab_jupyter_content_user_profile.ipynb`
 
-In this notebook, the following content-based recommender system is built:
+Recommendations based on user profiles:
 
 - We consider that the course-genre weights are known.
 - We have a user profile, i.e., a matrix which contains the weight each user gives to a genre/feature. These weights are not normalized.
@@ -268,10 +268,20 @@ In this notebook, the following content-based recommender system is built:
 
 #### `lab_jupyter_content_course_similarity.ipynb`
 
+Recommendations based on course similarities:
 
+- We have computed course similarities (matrix) using the BoWs of course descriptions in the FE notebook.
+- For each test user with the list of courses he/she took, we get the list of unattended courses with a similarity larger than a threshold value.
 
 #### `lab_jupyter_content_clustering.ipynb`
 
+Recommendations based on user profile clustering:
+
+- User profiles are reduced to less dimensions with PCA.
+- User profiles are clustered with K-Means applying the elbow method for k value discovery
+- For each user in a cluster, his un-attended courses are found.
+- For each user cluster, the most attended courses are listed.
+- For each user, the most attended courses in theirs cluster are recommended, if these were not visited by them yet.
 
 
 ## 4. Supervised-Learning Based Recommender System
