@@ -27,20 +27,20 @@ No guarantees
   - [1. Introduction](#1-introduction)
     - [1.1 Introduction to Recommender Systems](#11-introduction-to-recommender-systems)
     - [1.2 Project Description](#12-project-description)
+    - [1.3 My Notes on Recommender Systems](#13-my-notes-on-recommender-systems)
+      - [Problem definition](#problem-definition)
+      - [Content-Based RecSys](#content-based-recsys)
+      - [Collaborative Filtering RecSys](#collaborative-filtering-recsys)
   - [2. Exploratory Data Analysis and Feature Engineering](#2-exploratory-data-analysis-and-feature-engineering)
     - [2.1 Download and Analyze Dataset: `lab_jupyter_eda.ipynb`](#21-download-and-analyze-dataset-lab_jupyter_edaipynb)
     - [2.2 Feature Engineering: `lab_jupyter_fe_bow_solution.ipynb`, `lab_jupyter_fe_course_sim_solution.ipynb`](#22-feature-engineering-lab_jupyter_fe_bow_solutionipynb-lab_jupyter_fe_course_sim_solutionipynb)
   - [3. Content-Based Recommender System](#3-content-based-recommender-system)
-    - [3.1 My Notes on Recommender Systems](#31-my-notes-on-recommender-systems)
-      - [Problem definition](#problem-definition)
-      - [Content-Based RecSys](#content-based-recsys)
-      - [Collaborative Filtering RecSys](#collaborative-filtering-recsys)
-    - [3.2 Introduction to Content-Based Recommender Systems](#32-introduction-to-content-based-recommender-systems)
-    - [3.3 Lab Notebooks](#33-lab-notebooks)
+    - [3.1 Introduction to Content-Based Recommender Systems](#31-introduction-to-content-based-recommender-systems)
+    - [3.2 Lab Notebooks](#32-lab-notebooks)
       - [`lab_jupyter_content_user_profile.ipynb`](#lab_jupyter_content_user_profileipynb)
       - [`lab_jupyter_content_course_similarity.ipynb`](#lab_jupyter_content_course_similarityipynb)
       - [`lab_jupyter_content_clustering.ipynb`](#lab_jupyter_content_clusteringipynb)
-  - [4. Supervised-Learning Based Recommender System](#4-supervised-learning-based-recommender-system)
+  - [4. Collaborative Filtering Based Recommender System](#4-collaborative-filtering-based-recommender-system)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
   - [6. Project Submission](#6-project-submission)
 
@@ -52,7 +52,7 @@ The notebooks and the code associated to this module and the project are located
 
 ### 1.1 Introduction to Recommender Systems
 
-:warning: For a more theoretical introduction, check my notes in [`ML_Anomaly_Recommender.md`](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md). Also, see section [3.1 My Notes on Recommender Systems](#31-my-notes-on-recommender-systems).
+:warning: For a more theoretical introduction, check my notes in [`ML_Anomaly_Recommender.md`](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md). Also, see section [1.3 My Notes on Recommender Systems](#13-my-notes-on-recommender-systems).
 
 Even though people's taste might vary, they follow patterns: they like things of the same category, with similar contents, etc. Recommender systems are everywhere and they suggest us many things based on a model:
 
@@ -104,55 +104,7 @@ Tasks:
 - Building collaborative-filtering recommender systems using various supervised learning algorithms: K Nearest Neighbors, Non-negative Matrix Factorization (NMF), Neural Networks, Linear Regression, Logistic Regression, RandomForest, etc.
 - Creating an insightful and informative slideshow and presenting it to your peers
 
-## 2. Exploratory Data Analysis and Feature Engineering
-
-### 2.1 Download and Analyze Dataset: `lab_jupyter_eda.ipynb`
-
-Notebook: [`lab_jupyter_eda.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_eda.ipynb)
-
-Nothing really new is done in the notebook/exercise.
-
-The dataset consists on these files:
-
-1. `course_genre.csv`: `(307, 16)`: course id, title and binary values of topics covered in each course.
-2. `ratings.csv`: `(233306, 3)`: user id, course id and rating of each course by the user; the rating has only two possible values: `2: enrolled, not finished`, `3: enrolled and finished`.
-3. `user_profile.csv`: `(33901, 15)`: user id and weight for each course feature for each student. The weights span from 0 to 63, so I understand they are summed/aggregated values for each student, i.e., the accumulated ratings (2 or 3) of the students for each course feature. In other words, these weights seem not to be normalized.
-4. `rs_content_test.csv`: `(9402, 3)`: some test user rating data, consisting of `user` (student id), `item` (`COURSE_ID`), `rating`. Altogether 1000 unique users are contained, so some users have rated some courses.
-
-Other values for ratings would be possible (but not present), e.g.: `1` clicked on it, `0` or `NA` no exposure. It is interesting the fact that we don't use a real rating, but only attendance and completion information. This is very practical, because probably few people rate courses/movies, but we know for all users, who started watching a course/movie, and who finished it.
-
-Steps followed:
-
-- All titles are joined to created a `wordcloud`.
-- Course counts for topics are analyzed: sorted according to counts (popularity of each topic).
-- Users with most enrollments are ranked.
-- Courses with most enrollments are ranked: 20 most popular.
-- A join (`merge()`) is performed to get course names.
-
-### 2.2 Feature Engineering: `lab_jupyter_fe_bow_solution.ipynb`, `lab_jupyter_fe_course_sim_solution.ipynb`
-
-New but complementary datasets are presented:
-
-1. `course_processed.csv`: it adds a course description to `course_genre.csv`.
-2. `course_bows.csv`: the result of the first notebook in this section/part: `lab_jupyter_fe_bow_solution.ipynb`.
-
-Notebooks:
-
-- [`lab_jupyter_fe_bow_solution.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_fe_bow_solution.ipynb)
-- [`lab_jupyter_fe_course_sim_solution.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_fe_course_sim_solution.ipynb)
-
-Steps followed:
-
-- Course title and description are merged to form a text field from which features are extracted, i.e., token counts (Bags of Words, BoW).
-- Text field tokenization is performed with NLTK, removing stop words and taking only nouns (after POS tagging).
-- A vocabulary/dictionary is created with gensim.
-- BoWs are created for each course text field, storing them stacked in a dataframe in which each course-token pair has an entry.
-- The created dataframe is pivoted to create sparse BoW entries, one for each course.
-- Similarities between courses are computed: given a course with its BoW sparse array, the most similar ones are found.
-
-## 3. Content-Based Recommender System
-
-### 3.1 My Notes on Recommender Systems
+### 1.3 My Notes on Recommender Systems
 
 :warning: I prefer the theoretical explanation of [Recommender Systems by Andrew Ng](https://github.com/mxagar/machine_learning_coursera/blob/main/07_Anomaly_Recommender/ML_Anomaly_Recommender.md#2-recommender-systems).
 
@@ -218,7 +170,56 @@ In practice, that is done with the **non-negative matrix factorization**.
 
 See my hand-written notes in [Matrix_Factorization.pdf](Matrix_Factorization.pdf).
 
-### 3.2 Introduction to Content-Based Recommender Systems
+
+## 2. Exploratory Data Analysis and Feature Engineering
+
+### 2.1 Download and Analyze Dataset: `lab_jupyter_eda.ipynb`
+
+Notebook: [`lab_jupyter_eda.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_eda.ipynb)
+
+Nothing really new is done in the notebook/exercise.
+
+The dataset consists on these files:
+
+1. `course_genre.csv`: `(307, 16)`: course id, title and binary values of topics covered in each course.
+2. `ratings.csv`: `(233306, 3)`: user id, course id and rating of each course by the user; the rating has only two possible values: `2: enrolled, not finished`, `3: enrolled and finished`.
+3. `user_profile.csv`: `(33901, 15)`: user id and weight for each course feature for each student. The weights span from 0 to 63, so I understand they are summed/aggregated values for each student, i.e., the accumulated ratings (2 or 3) of the students for each course feature. In other words, these weights seem not to be normalized.
+4. `rs_content_test.csv`: `(9402, 3)`: some test user rating data, consisting of `user` (student id), `item` (`COURSE_ID`), `rating`. Altogether 1000 unique users are contained, so some users have rated some courses.
+
+Other values for ratings would be possible (but not present), e.g.: `1` clicked on it, `0` or `NA` no exposure. It is interesting the fact that we don't use a real rating, but only attendance and completion information. This is very practical, because probably few people rate courses/movies, but we know for all users, who started watching a course/movie, and who finished it.
+
+Steps followed:
+
+- All titles are joined to created a `wordcloud`.
+- Course counts for topics are analyzed: sorted according to counts (popularity of each topic).
+- Users with most enrollments are ranked.
+- Courses with most enrollments are ranked: 20 most popular.
+- A join (`merge()`) is performed to get course names.
+
+### 2.2 Feature Engineering: `lab_jupyter_fe_bow_solution.ipynb`, `lab_jupyter_fe_course_sim_solution.ipynb`
+
+New but complementary datasets are presented:
+
+1. `course_processed.csv`: it adds a course description to `course_genre.csv`.
+2. `course_bows.csv`: the result of the first notebook in this section/part: `lab_jupyter_fe_bow_solution.ipynb`.
+
+Notebooks:
+
+- [`lab_jupyter_fe_bow_solution.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_fe_bow_solution.ipynb)
+- [`lab_jupyter_fe_course_sim_solution.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_fe_course_sim_solution.ipynb)
+
+Steps followed:
+
+- Course title and description are merged to form a text field from which features are extracted, i.e., token counts (Bags of Words, BoW).
+- Text field tokenization is performed with NLTK, removing stop words and taking only nouns (after POS tagging).
+- A vocabulary/dictionary is created with gensim.
+- BoWs are created for each course text field, storing them stacked in a dataframe in which each course-token pair has an entry.
+- The created dataframe is pivoted to create sparse BoW entries, one for each course.
+- Similarities between courses are computed: given a course with its BoW sparse array, the most similar ones are found.
+
+## 3. Content-Based Recommender System
+
+### 3.1 Introduction to Content-Based Recommender Systems
 
 Content based Recomender Systems try to recommend similar products to users based on their profile; the profile is built with
 
@@ -250,7 +251,7 @@ To **generate the recommendation rating of each unseen movie**, the user profile
 
 These kind of Recommender Systems work usually very well, but have a major issue: the user might like movies from a genre which has not been seen in the platform (e.g., drama, as opposed to Sci-Fi). Such movies are undetected. Methods such as **collaborative filtering** can handle those cases.
 
-### 3.3 Lab Notebooks
+### 3.2 Lab Notebooks
 
 In this section, 3 notebooks are implemented in sequence:
 
@@ -284,7 +285,7 @@ Recommendations based on user profile clustering:
 - For each user, the most attended courses in theirs cluster are recommended, if these were not visited by them yet.
 
 
-## 4. Supervised-Learning Based Recommender System
+## 4. Collaborative Filtering Based Recommender System
 
 ## 5. Deployment and Presentation
 
