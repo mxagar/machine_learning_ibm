@@ -152,7 +152,7 @@ The problem is formally described with these variables:
 
 #### Content-Based RecSys
 
-In the content-based approach, all `x` vectors are known, i.e., `X` is known: the features of the movies and their values. The goal is to obtain `Theta` so that `Y_hat X * Theta'` is the closes possible to `Y`. That is achieved with a regression optimization in which we get the `Theta` matrix.
+In the content-based approach, all `x` vectors are known, i.e., `X` is known: the features of the movies and their values. The goal is to obtain `Theta` so that `Y_hat = X * Theta'` is the closes possible to `Y`. That is achieved with a regression optimization in which we get the `Theta` matrix.
 
 In the IBM approach for content-based systems, the methodology is different:
 
@@ -169,7 +169,6 @@ In collaborative filtering, we only know the size `k`; neither the values from `
 In practice, that is done with the **non-negative matrix factorization**.
 
 See my hand-written notes in [Matrix_Factorization.pdf](Matrix_Factorization.pdf).
-
 
 ## 2. Exploratory Data Analysis and Feature Engineering
 
@@ -284,8 +283,39 @@ Recommendations based on user profile clustering:
 - For each user cluster, the most attended courses are listed.
 - For each user, the most attended courses in theirs cluster are recommended, if these were not visited by them yet.
 
-
 ## 4. Collaborative Filtering Based Recommender System
+
+Collaborative filtering is based on the assumption/fact that there is a relationship between users and items, so that we can determine which items a user might prefer.
+
+There are two major collaborative filtering approaches:´, depending on which similarites or point neighborhoods we observe:
+
+- User-based
+- Item-based
+
+In the **user-based** approach we have a target/active user for whom similar users or users in the clustering neighborhood are found. Similarity is determined by preferences, which can be derived as liked movies. From those similar users, movies that the target user has not watched/liked but the similar user has are taken as recommendations.
+
+![Collaborative Filtering: User-Based](./pics/collaborative_filtering_user_based_1.jpg)
+
+Given a user-item matrix and an active/target user, we'd like to fill in his/her missing ratings. To that end:
+
+- The similarity weights of the active user wrt. other users are computed.
+- The weighted ratings matrix is computed: for the missing ratings, we take the ratings of the other users and apply to them the similarity weight; then, those multiplications are summed to obtain an approximate estimation. That sum is normalized by the sum of all similarity weights used in the operation.
+
+![Collaborative Filtering: User-Item Matrix](./pics/collaborative_filtering_user_based_2.jpg)
+
+![Collaborative Filtering: Weighted Ratings Matrix](./pics/collaborative_filtering_user_based_3.jpg)
+
+![Collaborative Filtering: Estimated Recommendations](./pics/collaborative_filtering_user_based_4.jpg)
+
+In the **item-based** approach, similar items are found, however, that similarity is not based on the content, but on the ratings by the users! Thus, regardless of the content, items are suggested which were liked by other users that have seen some of the movies we have. In other words, similarity is not given by the content, but with the motto "other users also liked".
+
+![Collaborative Filtering: Item-Based](./pics/collaborative_filtering_item_based.jpg)
+
+Collaborative filtering is very effective but has the following challenges:
+
+- Sparsity: users rate only a limited number of items; we might not have enough ratings sometimes to make a prediction.
+- Cold start: it is difficult to make a recommendation to new users or new items.
+- Scalability: as the number of users and items increases, the performance drops, because we start to have many similar items.
 
 ## 5. Deployment and Presentation
 
