@@ -292,7 +292,7 @@ There are two major collaborative filtering approaches:´, depending on which si
 - User-based
 - Item-based
 
-In the **user-based** approach we have a target/active user for whom similar users or users in the clustering neighborhood are found. Similarity is determined by preferences, which can be derived as liked movies. From those similar users, movies that the target user has not watched/liked but the similar user has are taken as recommendations.
+In the **user-based** approach we have a target/active user for whom similar users or users in the clustering neighborhood are found. Similarity is determined by preferences, which can be derived as liked movies. From those similar users, movies that the target user has not watched/liked but the similar user has are taken as recommendations. Note that user profiles don't need to be formally genre preferences, but it suffices with the item preferences; therefore, we don't expect feature extraction from movies/items. However, the user-item matrix is required: the matrix that contains the ratings the users give to the items. The similarities are computed between the rows (users).
 
 ![Collaborative Filtering: User-Based](./pics/collaborative_filtering_user_based_1.jpg)
 
@@ -307,7 +307,7 @@ Given a user-item matrix and an active/target user, we'd like to fill in his/her
 
 ![Collaborative Filtering: Estimated Recommendations](./pics/collaborative_filtering_user_based_4.jpg)
 
-In the **item-based** approach, similar items are found, however, that similarity is not based on the content, but on the ratings by the users! Thus, regardless of the content, items are suggested which were liked by other users that have seen some of the movies we have. In other words, similarity is not given by the content, but with the motto "other users also liked".
+In the **item-based** approach, similar items are found, however, that similarity is not based on the content, but on the ratings by the users! Thus, regardless of the content, items are suggested which were liked by other users that have seen some of the movies we have. In other words, similarity is not given by the content, but with the motto "other users also liked". In practice, we need the user-item matrix and instead of looking similarities in the rows (user-based approach), we look for similarities in the columns (items).
 
 ![Collaborative Filtering: Item-Based](./pics/collaborative_filtering_item_based.jpg)
 
