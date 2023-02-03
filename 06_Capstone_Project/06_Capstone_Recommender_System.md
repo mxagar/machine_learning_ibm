@@ -41,6 +41,12 @@ No guarantees
       - [`lab_jupyter_content_course_similarity.ipynb`](#lab_jupyter_content_course_similarityipynb)
       - [`lab_jupyter_content_clustering.ipynb`](#lab_jupyter_content_clusteringipynb)
   - [4. Collaborative Filtering Based Recommender System](#4-collaborative-filtering-based-recommender-system)
+    - [4.2 Lab Notebooks](#42-lab-notebooks)
+      - [`lab_jupyter_cf_knn.ipynb`](#lab_jupyter_cf_knnipynb)
+      - [`lab_jupyter_cf_nmf.ipynb`](#lab_jupyter_cf_nmfipynb)
+      - [`lab_jupyter_cf_ann.ipynb`](#lab_jupyter_cf_annipynb)
+      - [`lab_jupyter_cf_regression_w_embeddings.ipynb`](#lab_jupyter_cf_regression_w_embeddingsipynb)
+      - [`lab_jupyter_cf_classification_w_embeddings.ipynb`](#lab_jupyter_cf_classification_w_embeddingsipynb)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
   - [6. Project Submission](#6-project-submission)
 
@@ -316,6 +322,29 @@ Collaborative filtering is very effective but has the following challenges:
 - Sparsity: users rate only a limited number of items; we might not have enough ratings sometimes to make a prediction.
 - Cold start: it is difficult to make a recommendation to new users or new items.
 - Scalability: as the number of users and items increases, the performance drops, because we start to have many similar items.
+
+### 4.2 Lab Notebooks
+
+In this section, 5 notebooks are implemented in sequence:
+
+- [`lab_jupyter_cf_knn.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_cf_knn.ipynb)
+- [`lab_jupyter_cf_nmf.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_cf_nmf.ipynb)
+- [`lab_jupyter_cf_ann.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_cf_ann.ipynb)
+- [`lab_jupyter_cf_regression_w_embeddings.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_cf_regression_w_embeddings.ipynb)
+- [`lab_jupyter_cf_classification_w_embeddings.ipynb`](https://github.com/mxagar/machine_learning_ibm/blob/main/06_Capstone_Project/lab/lab_jupyter_cf_classification_w_embeddings.ipynb)
+
+The first 2 use "classical" ML methods with Scikit-Learn and the [Surprise](https://surpriselib.com/) library. The last 3 use Artificial Neural Networks (ANN) with Keras.
+
+#### `lab_jupyter_cf_knn.ipynb`
+
+#### `lab_jupyter_cf_nmf.ipynb`
+
+#### `lab_jupyter_cf_ann.ipynb`
+
+#### `lab_jupyter_cf_regression_w_embeddings.ipynb`
+
+#### `lab_jupyter_cf_classification_w_embeddings.ipynb`
+
 
 ## 5. Deployment and Presentation
 
