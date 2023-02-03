@@ -47,6 +47,8 @@ No guarantees
       - [`lab_jupyter_cf_ann.ipynb`](#lab_jupyter_cf_annipynb)
       - [`lab_jupyter_cf_regression_w_embeddings.ipynb`](#lab_jupyter_cf_regression_w_embeddingsipynb)
       - [`lab_jupyter_cf_classification_w_embeddings.ipynb`](#lab_jupyter_cf_classification_w_embeddingsipynb)
+      - [Forum Questions](#forum-questions)
+        - [How can we obtain the embeddings of a new user/item?](#how-can-we-obtain-the-embeddings-of-a-new-useritem)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
   - [6. Project Submission](#6-project-submission)
 
@@ -337,13 +339,38 @@ The first 2 use "classical" ML methods with Scikit-Learn and the [Surprise](http
 
 #### `lab_jupyter_cf_knn.ipynb`
 
+  - A dense user-items ratings table is converted to a sparse table.
+  - Item-based and user-based k-NN search is applied to find the closest items/users given their similarity and perform a prediction with a weighted sum. This is done with the [surprise](https://surprise.readthedocs.io/en/stable/index.html) library and manually.
+
 #### `lab_jupyter_cf_nmf.ipynb`
+
+In this notebook, Non-Negative Matrix Factorization (NMF) is used to decompose a ratings table into lower rank matrices which encode latent features. This is done with the [surprise](https://surprise.readthedocs.io/en/stable/index.html) library and with Scikit-Learn.
 
 #### `lab_jupyter_cf_ann.ipynb`
 
+In this notebook a very simple ANN is created with Keras using OOP, i.e., inheriting the `tensorflow.keras.Model` class. The model takes the dense ratings dataframe encoded with indices and it builds two embeddings: one for the user representations and the other for the item representations. Both embeddings have size 16 and are multiplied (dot product) to predict the rating.
+
+![Embedding feature vectors](pics/embedding_feature_vector.jpg)
+
+The training results in two important embedding matrices, which encode latent features. These are persisted and used in the next notebooks.
+
 #### `lab_jupyter_cf_regression_w_embeddings.ipynb`
 
+
+
+![Embedding feature vectors - regression](pics/rating_regression.jpg)
+
 #### `lab_jupyter_cf_classification_w_embeddings.ipynb`
+
+#### Forum Questions
+
+##### How can we obtain the embeddings of a new user/item?
+
+In the collaborative filtering notebooks with artificial NNs of the 4th week user and item embeddings are computed. Then, those embeddings are used as features to create regression and classification models.
+
+My question is related to the situation in which we have a new user or a new course/item: how should we obtain the embedding representation of them? Those embedding vectors are necessary to use the regression/classification models. However, the new items are not part of the training set, and therefore, the embedding layers don't contain them.
+
+So which is the recommended approach?
 
 
 ## 5. Deployment and Presentation
