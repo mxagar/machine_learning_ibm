@@ -348,7 +348,7 @@ In this notebook, Non-Negative Matrix Factorization (NMF) is used to decompose a
 
 #### `lab_jupyter_cf_ann.ipynb`
 
-In this notebook a very simple ANN is created with Keras using OOP, i.e., inheriting the `tensorflow.keras.Model` class. The model takes the dense ratings dataframe encoded with indices and it builds two embeddings: one for the user representations and the other for the item representations. Both embeddings have size 16 and are multiplied (dot product) to predict the rating.
+In this notebook, a very simple ANN is created with Keras using OOP, i.e., inheriting the `tensorflow.keras.Model` class. The model takes the dense ratings dataframe encoded with indices and it builds two embeddings: one for the user representations and the other for the item representations. Both embeddings have size 16 and are multiplied (dot product) to predict the rating.
 
 ![Embedding feature vectors](pics/embedding_feature_vector.jpg)
 
@@ -356,11 +356,25 @@ The training results in two important embedding matrices, which encode latent fe
 
 #### `lab_jupyter_cf_regression_w_embeddings.ipynb`
 
+In this notebook, the user and item embeddings are loaded, as well as the dense ratings dataframe; they have the following shapes:
 
+- user embeddings: `(33901, 17)`
+- item embeddings: `(126, 17)`
+- ratings (dense): `(233306, 3)`
+
+The embeddings are joined to the ratings dataframe so that we get a table of shape `(233306, 3+16+16)`. Then, the two embedding vectors are summed and we collapse the large dataframe to a shape of `(233306, 16+1)`, i.e., 16 features (summed embedding vectors) and the rating (target).
 
 ![Embedding feature vectors - regression](pics/rating_regression.jpg)
 
+With this dataset, regression models are applied:
+
+- Linear regression.
+- Lasso regression with cross-validation.
+- Ridge regression with cross-validation.
+
 #### `lab_jupyter_cf_classification_w_embeddings.ipynb`
+
+This notebook applies classification (random forest) to the dataset processed in the previous notebook.
 
 #### Forum Questions
 
