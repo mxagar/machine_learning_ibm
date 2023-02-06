@@ -391,7 +391,7 @@ So which is the recommended approach?
 
 ## 5. Deployment and Presentation
 
-This section is about how to use [Streamlit]() and how to present the project.
+This section is about how to use [Streamlit](https://streamlit.io/) and how to present the project.
 
 For a more detailed guide to `streamlit`, check my notes: [streamlit_guide](https://github.com/mxagar/streamlit_guide).
 
@@ -409,9 +409,66 @@ Additionally, the section focuses on how to present the findings of such a proje
 
 ### 5.1 Notes on the First App
 
+File: [`lab/first_app/app.py`](lab/first_app/app.py)
 
+```python
+import streamlit as st
+import pandas as pd
+
+# 1. Create a streamlit title widget, this will be shown first
+st.title("This is a sample app")
+    
+# 2. Then create a streamlit button widget, this will be shown after title
+button1 = st.button("Click to show a dataframe")
+print(button1)
+
+if button1:
+    df = pd.DataFrame({
+    'column1': [1, 2, 3, 4],
+    'column2': [10, 20, 30, 40]
+    })
+    # Show the Pandas dataframe using st.dataframe() method
+    st.dataframe(df)
+    # Visualize the column1 series using st.line_chart() method
+    st.line_chart(df['column1'])
+
+
+# 3. Create two streamlit slider widget for receiving a numerical value input
+slider1 = st.slider("Slider1", min_value=1, max_value=10, value=1)
+print(slider1)
+slider2 = st.slider("Slider2", min_value=1, max_value=10, value=2)
+print(slider2)
+
+# 4. Create a streamlit text widget to show the sum result of two slider values
+# Create a streamlit subheader widget
+st.subheader("The sum of slider1 and slider2 is: ")
+st.text(slider1 + slider2)
+```
+
+To run/use it:
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
 
 ### 5.2 Notes on the Project Template
+
+Files: 
+
+- [`lab/project_template/backend.py`](lab/project_template/backend.py)
+- [`lab/project_template/recommender_app.py`](lab/project_template/recommender_app.py)
+- `data/`
+- `requirements.txt`
+
+To run/use it:
+
+```bash
+pip install -r requirements.txt
+streamlit run recommender_app.py
+```
+
+
 
 ### 5.3 Notes on the Presentation
 
