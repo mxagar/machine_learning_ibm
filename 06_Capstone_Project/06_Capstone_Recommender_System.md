@@ -50,6 +50,9 @@ No guarantees
       - [Forum Questions](#forum-questions)
         - [How can we obtain the embeddings of a new user/item?](#how-can-we-obtain-the-embeddings-of-a-new-useritem)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
+    - [5.1 Notes on the First App](#51-notes-on-the-first-app)
+    - [5.2 Notes on the Project Template](#52-notes-on-the-project-template)
+    - [5.3 Notes on the Presentation](#53-notes-on-the-presentation)
   - [6. Project Submission](#6-project-submission)
 
 ## 1. Introduction
@@ -386,7 +389,30 @@ My question is related to the situation in which we have a new user or a new cou
 
 So which is the recommended approach?
 
-
 ## 5. Deployment and Presentation
+
+This section is about how to use [Streamlit]() and how to present the project.
+
+For a more detailed guide to `streamlit`, check my notes: [streamlit_guide](https://github.com/mxagar/streamlit_guide).
+
+The content of this section are in the following files:
+
+- [`lab-intro-streamlit.pdf`](lab-intro-streamlit.pdf)
+- [`lab-cloudide-recommender-w-streamlit.md.pdf`](lab-cloudide-recommender-w-streamlit.md.pdf)
+
+Two app templates are provided:
+
+- [`lab/first_app`](lab/first_app)
+- [`lab/project_template`](lab/project_template)
+
+Additionally, the section focuses on how to present the findings of such a project.
+
+### 5.1 Notes on the First App
+
+
+
+### 5.2 Notes on the Project Template
+
+### 5.3 Notes on the Presentation
 
 ## 6. Project Submission
