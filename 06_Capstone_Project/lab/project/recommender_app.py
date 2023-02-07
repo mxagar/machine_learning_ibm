@@ -129,16 +129,6 @@ def train(model_name, params):
     Returns:
         None.
     """
-    # MODELS
-    # 0: "Course Similarity"
-    # 1: "User Profile"
-    # 2: "Clustering"
-    # 3: "Clustering with PCA"
-    # 4: "KNN"
-    # 5: "NMF"
-    # 6: "Neural Network"
-    # 7: "Regression with Embedding Features"
-    # 8: "Classification with Embedding Features"
     try:
         assert model_name in backend.MODELS
         with st.spinner('Training...'):
@@ -146,19 +136,8 @@ def train(model_name, params):
             backend.train(model_name)
         st.success('Done!')
     except AssertionError as err:
-        raise("Model name must be in the drop down.")
-
-    if model_name == backend.MODELS[0]:
-        # Start training course similarity model
-        with st.spinner('Training...'):
-            time.sleep(0.5)
-            backend.train(model_name)
-        st.success('Done!')
-    # TODO: Add other model training code here
-    elif model_name == backend.MODELS[1]:
-        pass
-    else:
-        pass
+        print("Model name must be in the drop down.") # we should use the logger
+        raise err
 
 def predict(model_name, user_ids, params):
     """Predict function for
@@ -177,12 +156,17 @@ def predict(model_name, user_ids, params):
     """
     res = None
     # Start making predictions based on model name, test user ids, and parameters
-    with st.spinner('Generating course recommendations: '):
-        time.sleep(0.5)
-        res = backend.predict(model_name, user_ids, params)
-    st.success('Recommendations generated!')
-    return res
-
+    try:
+        assert model_name in backend.MODELS
+        with st.spinner('Generating course recommendations: '):
+            time.sleep(0.5)
+            res = backend.predict(model_name, user_ids, params)
+        st.success('Recommendations generated!')
+        return res
+    except AssertionError as err:
+        print("Model name must be in the drop down.") # we should use the logger
+        raise err
+        
 ##
 ## User Interface (UI) 
 ##
@@ -236,7 +220,6 @@ if model_selection == backend.MODELS[0]:
                                              value=50, step=10)
     params['top_courses'] = top_courses
     params['sim_threshold'] = course_sim_threshold
-# TODO: Add hyper-parameters for other models
 # User profile model
 elif model_selection == backend.MODELS[1]:
     profile_sim_threshold = st.sidebar.slider('User Profile Similarity Threshold %',
@@ -247,6 +230,7 @@ elif model_selection == backend.MODELS[2]:
     cluster_no = st.sidebar.slider('Number of Clusters',
                                    min_value=0, max_value=50,
                                    value=20, step=1)
+# TODO: Add hyper-parameters for other models
 else:
     pass
 
