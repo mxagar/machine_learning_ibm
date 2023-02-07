@@ -52,6 +52,8 @@ No guarantees
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
     - [5.1 Notes on the First App](#51-notes-on-the-first-app)
     - [5.2 Notes on the Project Template](#52-notes-on-the-project-template)
+      - [Streamlit App Structure](#streamlit-app-structure)
+      - [Interesting Links](#interesting-links)
     - [5.3 Notes on the Presentation](#53-notes-on-the-presentation)
   - [6. Project Submission](#6-project-submission)
 
@@ -464,10 +466,61 @@ Files:
 To run/use it:
 
 ```bash
+# In a dedicated environment
 pip install -r requirements.txt
 streamlit run recommender_app.py
 ```
 
+The project implementation consists in completing the files `backend.py` and `recommender_app.py`.
+
+Some notes:
+
+- The structure of the `streamlit` app is quite nice and shows how to create a medium-sized app with Streamlit. However, two important things are missing in the template:
+  - The functionality should be written in a package/library.
+  - Tests, e.g., with `pytest`.
+- The `st_aggrid` package is used, which allows for the user to manually filter from a displayed dataframe &mdash; very cool: [streamlit-aggrid](https://github.com/PablocFonseca/streamlit-aggrid).
+- I added all new elements to [streamlit_guide](https://github.com/mxagar/streamlit_guide).
+
+In order to complete the app, the guide [`lab-cloudide-recommender-w-streamlit.md.pdf`](lab-cloudide-recommender-w-streamlit.md.pdf) can be followed.
+
+The final app is in the `lab/project_template` folder as well as:
+
+- in the Github repository [course_recommender_streamlit](https://github.com/mxagar/course_recommender_streamlit)
+- and deployed to Heroku: [https://ai-course-recommender-demo.herokuapp.com/](https://ai-course-recommender-demo.herokuapp.com/).
+
+#### Streamlit App Structure
+
+User interface:
+
+- Sidebar:
+  - Select model:
+    - "Course Similarity"
+    - "User Profile"
+    - "Clustering"
+    - "Clustering with PCA"
+    - "KNN"
+    - "NMF"
+    - "Neural Network"
+    - "Regression with Embedding Features"
+    - "Classification with Embedding Features"
+  - Tune hyperparameters
+  - Training button
+  - Prediction button
+- Main body:
+  - Courses dataframe: title + description; user needs to select courses!
+  - Selected courses shown
+  - Recommendations generated
+
+Files:
+
+- `recommender_app.py`
+- `backend.py`
+
+#### Interesting Links
+
+- [Streamlit AgGrid](https://pypi.org/project/streamlit-aggrid/)
+- [Medium: Streamlit App with Aggrid and Google Sheets](https://towardsdatascience.com/automate-streamlit-web-app-using-interactive-aggrid-with-google-sheets-81b93fd9e648)
+- [Medium: 7 Reasons Why You Should Use the Streamlit AgGrid Component](https://towardsdatascience.com/7-reasons-why-you-should-use-the-streamlit-aggrid-component-2d9a2b6e32f0)
 
 
 ### 5.3 Notes on the Presentation
