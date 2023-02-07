@@ -63,15 +63,46 @@ def add_new_ratings(new_courses):
 
 # Create course id to index and index to id mappings
 def get_doc_dicts():
+    """Compute course_id <-> course_index dictionaries.
+    
+    Inputs:
+        None
+    Outputs:
+        idx_id_dict: dict
+            Key: course index, int; value: course id, str.
+        id_idx_dict: dict
+            Key: course id, str; value: course index, int.
+    """
     bow_df = load_bow()
     grouped_df = bow_df.groupby(['doc_index', 'doc_id']).max().reset_index(drop=False)
     idx_id_dict = grouped_df[['doc_id']].to_dict()['doc_id']
     id_idx_dict = {v: k for k, v in idx_id_dict.items()}
     del grouped_df
+
     return idx_id_dict, id_idx_dict
 
-
-def course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_ids, sim_matrix):
+def course_similarity_recommendations(idx_id_dict, 
+                                      id_idx_dict,
+                                      enrolled_course_ids, 
+                                      sim_matrix):
+    """Use the course similarity matrix computed from course text BoWs
+    to get a dictionary of similar courses for a given course list.
+    The result dictionary contains a key for each unselected course
+    and an associated similarity value.
+    
+    Inputs:
+        idx_id_dict: dict
+            Key: course index, int; value: course id, str.
+        id_idx_dict: dict
+            Key: course id, str; value: course index, int.
+        enrolled_course_ids: list
+            List of selected courses, i.e., user enrolled courses.
+        sim_matrix: numpy.array
+            Similarity matrix between courses.
+    Outputs:
+        res: dict
+            Key: course id, str; value: similarity.
+    """
     all_courses = set(idx_id_dict.values())
     unselected_course_ids = all_courses.difference(enrolled_course_ids)
     # Create a dictionary to store your recommendation results
@@ -89,37 +120,33 @@ def course_similarity_recommendations(idx_id_dict, id_idx_dict, enrolled_course_
                     if sim >= res[unselect_course]:
                         res[unselect_course] = sim
     res = {k: v for k, v in sorted(res.items(), key=lambda item: item[1], reverse=True)}
+
     return res
 
-
-# Model training
 def train(model_name, params):
-    # MODELS
-    # 0: "Course Similarity"
-    # 1: "User Profile"
-    # 2: "Clustering"
-    # 3: "Clustering with PCA"
-    # 4: "KNN"
-    # 5: "NMF"
-    # 6: "Neural Network"
-    # 7: "Regression with Embedding Features"
-    # 8: "Classification with Embedding Features"
-    # TODO: Add model training code here
-    pass
-
+    """Train the selected model."""
+    if model_name == MODELS[0]: # 0: "Course Similarity"
+        pass
+    elif model_name == MODELS[1]: # 1: "User Profile"
+        pass
+    elif model_name == MODELS[2]: # 2: "Clustering"
+        pass
+    elif model_name == MODELS[3]: # 3: "Clustering with PCA"
+        pass
+    elif model_name == MODELS[4]: # 4: "KNN"
+        pass
+    elif model_name == MODELS[5]: # 5: "NMF"
+        pass
+    elif model_name == MODELS[6]: # 6: "Neural Network"
+        pass
+    elif model_name == MODELS[7]: # 7: "Regression with Embedding Features"
+        pass
+    elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
+        pass
 
 # Prediction
 def predict(model_name, user_ids, params):
-    # MODELS
-    # 0: "Course Similarity"
-    # 1: "User Profile"
-    # 2: "Clustering"
-    # 3: "Clustering with PCA"
-    # 4: "KNN"
-    # 5: "NMF"
-    # 6: "Neural Network"
-    # 7: "Regression with Embedding Features"
-    # 8: "Classification with Embedding Features"
+    """Predict with the trained model."""
     sim_threshold = 0.6
     if "sim_threshold" in params:
         sim_threshold = params["sim_threshold"] / 100.0
@@ -132,7 +159,7 @@ def predict(model_name, user_ids, params):
 
     for user_id in user_ids:
         # Course Similarity model
-        if model_name == MODELS[0]:
+        if model_name == MODELS[0]: # 0: "Course Similarity"
             ratings_df = load_ratings()
             user_ratings = ratings_df[ratings_df['user'] == user_id]
             enrolled_course_ids = user_ratings['item'].to_list()
@@ -146,9 +173,26 @@ def predict(model_name, user_ids, params):
                     courses.append(key)
                     scores.append(score)
         # TODO: Add prediction model code here
+        elif model_name == MODELS[1]: # 1: "User Profile"
+            pass
+        elif model_name == MODELS[2]: # 2: "Clustering"
+            pass
+        elif model_name == MODELS[3]: # 3: "Clustering with PCA"
+            pass
+        elif model_name == MODELS[4]: # 4: "KNN"
+            pass
+        elif model_name == MODELS[5]: # 5: "NMF"
+            pass
+        elif model_name == MODELS[6]: # 6: "Neural Network"
+            pass
+        elif model_name == MODELS[7]: # 7: "Regression with Embedding Features"
+            pass
+        elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
+            pass
 
     res_dict['USER'] = users
     res_dict['COURSE_ID'] = courses
     res_dict['SCORE'] = scores
     res_df = pd.DataFrame(res_dict, columns=['USER', 'COURSE_ID', 'SCORE'])
+
     return res_df
