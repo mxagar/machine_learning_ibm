@@ -52,6 +52,18 @@ def load_bow():
     course index and name, token, bow-count."""
     return backend.load_bow()
 
+@st.cache
+def load_course_genres():
+    """Load course genre table:
+    course index, title, 14 binary genre features."""
+    return backend.load_course_genres()
+
+@st.cache
+def load_user_profiles():
+    """Load user profiles table:
+    user id, 14 binary genre features."""
+    return backend.load_user_profiles()
+
 def init_recommender_app():
     """Initialization: It loads all dataframes to cache
     and builds and interactive AgGrid table for `course_processed.csv`
@@ -133,7 +145,7 @@ def train(model_name, params):
         assert model_name in backend.MODELS
         with st.spinner('Training...'):
             time.sleep(0.5)
-            backend.train(model_name)
+            backend.train(model_name, params)
         st.success('Done!')
     except AssertionError as err:
         print("Model name must be in the drop down.") # we should use the logger
@@ -196,42 +208,39 @@ model_selection = st.sidebar.selectbox(
 )
 
 # Hyper-parameters for each model: Element 2 from sidebar
-# MODELS
-# 0: "Course Similarity"
-# 1: "User Profile"
-# 2: "Clustering"
-# 3: "Clustering with PCA"
-# 4: "KNN"
-# 5: "NMF"
-# 6: "Neural Network"
-# 7: "Regression with Embedding Features"
-# 8: "Classification with Embedding Features"
 params = {}
 st.sidebar.subheader('2. Tune Hyper-parameters: ')
-# Course similarity model
-if model_selection == backend.MODELS[0]:
-    # Add a slide bar for selecting top courses
-    top_courses = st.sidebar.slider('Top courses',
-                                    min_value=0, max_value=100,
-                                    value=10, step=1)
-    # Add a slide bar for choosing similarity threshold
+top_courses = st.sidebar.slider('Top courses',
+                                min_value=0, max_value=100,
+                                value=10, step=1)
+params['top_courses'] = top_courses
+# Model-dependent options
+if model_selection == backend.MODELS[0]: # 0: "Course Similarity"
     course_sim_threshold = st.sidebar.slider('Course Similarity Threshold %',
                                              min_value=0, max_value=100,
                                              value=50, step=10)
-    params['top_courses'] = top_courses
     params['sim_threshold'] = course_sim_threshold
-# User profile model
-elif model_selection == backend.MODELS[1]:
-    profile_sim_threshold = st.sidebar.slider('User Profile Similarity Threshold %',
-                                              min_value=0, max_value=100,
-                                              value=50, step=10)
-# Clustering model
-elif model_selection == backend.MODELS[2]:
+elif model_selection == backend.MODELS[1]: # 1: "User Profile"
+    profile_threshold = st.sidebar.slider('Course Topic Alignment Score',
+                                          min_value=0, max_value=100,
+                                          value=1, step=1)
+    params['profile_threshold'] = profile_threshold
+elif model_selection == backend.MODELS[2]: # 2: "Clustering"
     cluster_no = st.sidebar.slider('Number of Clusters',
                                    min_value=0, max_value=50,
                                    value=20, step=1)
-# TODO: Add hyper-parameters for other models
-else:
+    params['cluster_no'] = cluster_no
+elif model_selection == backend.MODELS[3]: # 3: "Clustering with PCA"
+    pass
+elif model_selection == backend.MODELS[4]: # 4: "KNN"
+    pass
+elif model_selection == backend.MODELS[5]: # 5: "NMF"
+    pass
+elif model_selection == backend.MODELS[6]: # 6: "Neural Network"
+    pass
+elif model_selection == backend.MODELS[7]: # 7: "Regression with Embedding Features"
+    pass
+elif model_selection == backend.MODELS[8]: # 8: "Classification with Embedding Features"
     pass
 
 # Training: Element 3 from sidebar
@@ -250,10 +259,13 @@ st.sidebar.subheader('4. Prediction')
 pred_button = st.sidebar.button("Recommend New Courses")
 if pred_button and selected_courses_df.shape[0] > 0:
     # Create a new id for current user session
+    # We create a new entry in the ratings.csv for the interactive user
+    # who has selected the courses in the UI
     new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
-    user_ids = [new_id]
-    res_df = predict(model_selection, user_ids, params)
-    res_df = res_df[['COURSE_ID', 'SCORE']]
-    course_df = load_courses()
-    res_df = pd.merge(res_df, course_df, on=["COURSE_ID"]).drop('COURSE_ID', axis=1)
-    st.table(res_df)
+    if new_id:
+        user_ids = [new_id]
+        res_df = predict(model_selection, user_ids, params)
+        res_df = res_df[['COURSE_ID', 'SCORE']]
+        course_df = load_courses()
+        res_df = pd.merge(res_df, course_df, on=["COURSE_ID"]).drop('COURSE_ID', axis=1)
+        st.table(res_df)
