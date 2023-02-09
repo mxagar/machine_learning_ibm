@@ -129,6 +129,9 @@ def init_recommender_app():
     
     return results
 
+# Cache notes:
+# https://docs.streamlit.io/library/advanced-features/caching
+@st.cache(suppress_st_warning=True)
 def train(model_name, params):
     """Train function for
     the selected model + hyperparameters + courses.
@@ -139,19 +142,23 @@ def train(model_name, params):
         params: dict
             Hyperparameters.
     Returns:
-        None.
+        training_artifacts: dict
+            Any model-specific artifacts generated during training:
+            pipelines, dataframes, etc.
     """
+    training_artifacts = None
     try:
         assert model_name in backend.MODELS
         with st.spinner('Training...'):
             time.sleep(0.5)
-            backend.train(model_name, params)
+            training_artifacts = backend.train(model_name, params)
         st.success('Done!')
+        return training_artifacts
     except AssertionError as err:
         print("Model name must be in the drop down.") # we should use the logger
         raise err
 
-def predict(model_name, user_ids, params):
+def predict(model_name, user_ids, params, training_artifacts):
     """Predict function for
     the trained model.
     
@@ -172,8 +179,9 @@ def predict(model_name, user_ids, params):
         assert model_name in backend.MODELS
         with st.spinner('Generating course recommendations: '):
             time.sleep(0.5)
-            res = backend.predict(model_name, user_ids, params)
+            res, descr = backend.predict(model_name, user_ids, params, training_artifacts)
         st.success('Recommendations generated!')
+        st.write(descr)
         return res
     except AssertionError as err:
         print("Model name must be in the drop down.") # we should use the logger
@@ -216,22 +224,30 @@ top_courses = st.sidebar.slider('Top courses',
 params['top_courses'] = top_courses
 # Model-dependent options
 if model_selection == backend.MODELS[0]: # 0: "Course Similarity"
-    course_sim_threshold = st.sidebar.slider('Course Similarity Threshold %',
+    course_sim_threshold = st.sidebar.slider('Course similarity threshold %',
                                              min_value=0, max_value=100,
                                              value=50, step=10)
     params['sim_threshold'] = course_sim_threshold
 elif model_selection == backend.MODELS[1]: # 1: "User Profile"
-    profile_threshold = st.sidebar.slider('Course Topic Alignment Score',
+    profile_threshold = st.sidebar.slider('Course topic alignment score',
                                           min_value=0, max_value=100,
                                           value=1, step=1)
     params['profile_threshold'] = profile_threshold
 elif model_selection == backend.MODELS[2]: # 2: "Clustering"
-    cluster_no = st.sidebar.slider('Number of Clusters',
-                                   min_value=0, max_value=50,
-                                   value=20, step=1)
-    params['cluster_no'] = cluster_no
+    num_clusters = st.sidebar.slider('Number of clusters',
+                                   min_value=0, max_value=30,
+                                   value=11, step=1)
+    params['num_clusters'] = num_clusters
+    params['pca_variance'] = 1.0
 elif model_selection == backend.MODELS[3]: # 3: "Clustering with PCA"
-    pass
+    num_clusters = st.sidebar.slider('Number of clusters',
+                                   min_value=0, max_value=30,
+                                   value=11, step=1)
+    pca_variance = st.sidebar.slider('Genre variance coverage (PCA)',
+                                   min_value=0, max_value=100,
+                                   value=90, step=5)
+    params['num_clusters'] = num_clusters
+    params['pca_variance'] = pca_variance / 100.0
 elif model_selection == backend.MODELS[4]: # 4: "KNN"
     pass
 elif model_selection == backend.MODELS[5]: # 5: "NMF"
@@ -248,8 +264,9 @@ st.sidebar.subheader('3. Training: ')
 training_button = st.sidebar.button("Train Model")
 training_text = st.sidebar.text('')
 # Start training process
+training_artifacts = {}
 if training_button:
-    train(model_selection, params)
+    training_artifacts = train(model_selection, params)
 
 # Prediction
 # Element 4 from sidebar
@@ -257,6 +274,9 @@ if training_button:
 st.sidebar.subheader('4. Prediction')
 # Start prediction process
 pred_button = st.sidebar.button("Recommend New Courses")
+if not "model_name" in training_artifacts:
+    # Since train() is cached, we don't really recompute everything
+    training_artifacts = train(model_selection, params)
 if pred_button and selected_courses_df.shape[0] > 0:
     # Create a new id for current user session
     # We create a new entry in the ratings.csv for the interactive user
@@ -264,7 +284,7 @@ if pred_button and selected_courses_df.shape[0] > 0:
     new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
     if new_id:
         user_ids = [new_id]
-        res_df = predict(model_selection, user_ids, params)
+        res_df = predict(model_selection, user_ids, params, training_artifacts)
         res_df = res_df[['COURSE_ID', 'SCORE']]
         course_df = load_courses()
         res_df = pd.merge(res_df, course_df, on=["COURSE_ID"]).drop('COURSE_ID', axis=1)

@@ -17,6 +17,11 @@ from os.path import isfile
 import pandas as pd
 import numpy as np
 
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+
 MODELS = ("Course Similarity",
           "User Profile",
           "Clustering",
@@ -33,6 +38,8 @@ FILEPATH_COURSES = DATA_ROOT+"/course_processed.csv"
 FILEPATH_BOWS = DATA_ROOT+"/courses_bows.csv"
 FILEPATH_COURSE_GENRES = DATA_ROOT+"/course_genre.csv"
 FILEPATH_USER_PROFILES = DATA_ROOT+"/user_profile.csv"
+RANDOM_SEED = 123
+NUM_GENRES = 14
 
 def load_ratings():
     """Load ratings dataframe: user, course, rating (2/3)."""
@@ -169,14 +176,40 @@ def course_similarity_recommendations(idx_id_dict,
 
     return res
 
-def user_profile_recommendations(idx_id_dict, 
-                                 enrolled_course_ids,
-                                 course_genres_df):
+def create_user_profile(enrolled_course_ids,
+                        course_genres_df):
+    """Given a list of courses in which a user has enrolled,
+    build a user profile based on the genres of those courses.
+
+    Inputs:
+        enrolled_course_ids: list
+            List of selected courses, i.e., user enrolled courses.
+        sim_matrix: pd.DataFrame
+            Data frame with binary genre features for each course.
+    Outputs:
+        user_profile: numpy.array (1, NUM_GENRES=14)
+            Array with genre weights associated to the user.
+    """
+    # Build profile
+    user_profile = np.zeros((1,NUM_GENRES))
+    standard_rating = 3.0
+    for enrolled_course in enrolled_course_ids:
+        course_descriptor = course_genres_df[course_genres_df.COURSE_ID == enrolled_course].iloc[:,2:].values
+        user_profile += standard_rating*course_descriptor 
+
+    return user_profile
+
+def compute_user_profile_recommendations(user_profile,
+                                         idx_id_dict, 
+                                         enrolled_course_ids,
+                                         course_genres_df):
     """Given a list of courses in which a user has enrolled,
     build a user profile based on the genres of those courses
     and suggest courses aligned in the genre/topic space.
 
     Inputs:
+        user_profile: numpy.array (1, NUM_GENRES=14)
+            Array with genre weights associated to the user.
         idx_id_dict: dict
             Key: course index, int; value: course id, str.
         enrolled_course_ids: list
@@ -190,12 +223,6 @@ def user_profile_recommendations(idx_id_dict,
     # Sets of attended/unattended courses
     all_courses = set(idx_id_dict.values())
     unselected_course_ids = all_courses.difference(enrolled_course_ids)
-    # Build profile
-    user_profile = np.zeros((1,14))
-    standard_rating = 3.0
-    for enrolled_course in enrolled_course_ids:
-        course_descriptor = course_genres_df[course_genres_df.COURSE_ID == enrolled_course].iloc[:,2:].values
-        user_profile += standard_rating*course_descriptor 
     # Get course score
     # FIXME: this could be one matrix multiplication
     res = {}
@@ -252,29 +279,114 @@ def build_user_profiles(course_genres_df,
 
 def cluster_users(user_profiles_df,
                   pca_variance,
-                  num_clusters,
-                  filepath):
-    #user_profiles_df = load_user_profiles(get_df=True)
-    pass
+                  num_clusters):
+    res_dict = dict()
+    # FIXME: I no longer store/return PCA components,
+    # so it's better to use Pipeline.fit() even with such a small pipeline...
+    # Extract features, user ids, etc.
+    feature_names = [f for f in list(user_profiles_df.columns) if f != 'user']
+    user_ids = user_profiles_df.loc[:, user_profiles_df.columns == 'user']
+    # Scale
+    features = user_profiles_df[feature_names]
+    res_dict['feature_names'] = feature_names
+    scaler = StandardScaler()
+    features_scaled = scaler.fit_transform(features)
+    # PCA
+    n_components = len(feature_names)
+    if pca_variance < 1.0:
+        n_components = pca_variance
+    pca = PCA(n_components=n_components)
+    features_scaled_pca = pca.fit_transform(features_scaled)
+    # K-Means Clustering
+    kmeans = KMeans(n_clusters=num_clusters,
+                init='k-means++',
+                random_state=RANDOM_SEED)
+    kmeans.fit(features_scaled_pca)
+    # Extract cluster labels
+    cluster_labels = kmeans.labels_
+    # Assemble user-cluster dataframe
+    labels_df = pd.DataFrame(cluster_labels)
+    cluster_df = pd.merge(user_ids, labels_df, left_index=True, right_index=True)
+    cluster_df.columns = ['user', 'cluster']
+    res_dict['cluster_df'] = cluster_df
 
+    # Pack transformers + model into a pipeline    
+    pipe = Pipeline([("scaler", scaler),
+                     ("pcs", pca),
+                     ("kmeans", kmeans)])
+    res_dict['pipe'] = pipe
+    
+    return res_dict
+
+def predict_user_clusters(user_profiles_df,
+                          training_artifacts):
+    # Unpack training artifacts
+    feature_names = training_artifacts['feature_names']
+    pipe = training_artifacts['pipe']
+    # Run pipeline
+    feature_names = training_artifacts['feature_names']
+    clusters = pipe.predict(user_profiles_df[feature_names])
+
+    return clusters
+
+def compute_user_cluster_recommendations(cluster, 
+                                         ratings_df,
+                                         training_artifacts):
+    """...
+
+    Inputs:
+        cluster: int
+        ratings_df: pandas.DataFrame
+        training_artifacts: dict
+            List of selected courses, i.e., user enrolled courses.
+    Outputs:
+        res: dict
+            Key: course id, str; value: score (=num enrollments).
+    """
+    # Initialize return dict as empty
+    res = {}
+    # Get cluster labels per user
+    cluster_df = training_artifacts['cluster_df']
+    # Join ratings (user-course) with user cluster labels
+    ratings_labelled_df = pd.merge(ratings_df, cluster_df, left_on='user', right_on='user')
+    # Aggregate/group by cluster and count enrollments for each course 
+    courses_cluster = ratings_labelled_df[['item', 'cluster']]
+    courses_cluster['count'] = [1] * len(courses_cluster)
+    courses_cluster = courses_cluster.groupby(['cluster','item']).agg(enrollments = ('count','sum')).reset_index()
+    # Take the rows with the required cluster values
+    # and sort them according to the number of enrollments
+    recommended_courses = (courses_cluster
+                            .loc[courses_cluster.cluster==cluster, ["item", "enrollments"]]
+                            .sort_values(by="enrollments", ascending=False)
+                            )
+    # Extract courses & enronllments (=scores) and pack them in a dictionary
+    courses = list(recommended_courses.item)
+    scores = list(recommended_courses.enrollments)
+    res = {courses[i]:scores[i] for i in range(len(courses))}
+
+    return res
+ 
+    
 def train(model_name, params):
     """Train the selected model."""
+    training_artifacts = dict()
+    training_artifacts["model_name"] = model_name
     if model_name == MODELS[0]: # 0: "Course Similarity"
         # Nothing to train here
         pass
     elif model_name == MODELS[1]: # 1: "User Profile"
         # Nothing to train here
         pass
-    elif model_name == MODELS[2]: # 2: "Clustering"
+    elif model_name == MODELS[2] or model_name == MODELS[3]: # 2: "Clustering", 3: "Clustering with PCA"
         # Build user profiles and persist (if not present)
         user_profiles_df = load_user_profiles(get_df=True)
+        pca_variance = params["pca_variance"]
         # Perform profile clustering and persist in same file
-        cluster_users(user_profiles_df=user_profiles_df, 
-                      pca_variance=1.0,
-                      num_clusters=params["params"],
-                      filepath=FILEPATH_USER_PROFILES)
-    elif model_name == MODELS[3]: # 3: "Clustering with PCA"
-        pass
+        res_dict = cluster_users(user_profiles_df=user_profiles_df, 
+                                 pca_variance=pca_variance,
+                                 num_clusters=params["num_clusters"])
+        # Extend training_artifacts with the new created elements from res_dict
+        training_artifacts.update(res_dict)
     elif model_name == MODELS[4]: # 4: "KNN"
         pass
     elif model_name == MODELS[5]: # 5: "NMF"
@@ -285,15 +397,23 @@ def train(model_name, params):
         pass
     elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
         pass
+    
+    return training_artifacts
 
 # Prediction
-def predict(model_name, user_ids, params):
+def predict(model_name, user_ids, params, training_artifacts):
     """Predict with the trained model."""
     users = []
     courses = []
     scores = []
-    res_dict = {}
+    res_dict = dict()
     score_threshold = -1.0
+    score_description = ""
+    try:
+        assert "model_name" in training_artifacts
+    except AssertionError as err:
+        print("You need to train the model before predicting!")
+        raise(err)
     for user_id in user_ids: # usually, we'll have a unique user id
         if model_name == MODELS[0]: # 0: "Course Similarity"
             # Extract params
@@ -312,6 +432,9 @@ def predict(model_name, user_ids, params):
                                                     id_idx_dict,
                                                     enrolled_course_ids,
                                                     sim_matrix)
+            score_description = "Note: the score is the cosine similarity\
+                                 between the selected and the recommended\
+                                 courses."
         elif model_name == MODELS[1]: # 1: "User Profile"
             # Extract params
             profile_threshold = 0.0
@@ -322,16 +445,43 @@ def predict(model_name, user_ids, params):
             course_genres_df = load_course_genres()
             idx_id_dict, _ = get_doc_dicts()
             ratings_df = load_ratings()
+            # Create user profile vector: (1,14)
+            user_ratings = ratings_df[ratings_df['user'] == user_id]
+            enrolled_course_ids = user_ratings['item'].to_list()
+            user_profile = create_user_profile(enrolled_course_ids,
+                                               course_genres_df)
             # Predict
             user_ratings = ratings_df[ratings_df['user'] == user_id]
             enrolled_course_ids = user_ratings['item'].to_list()
-            res = user_profile_recommendations(idx_id_dict, 
-                                               enrolled_course_ids,
-                                               course_genres_df)
+            res = compute_user_profile_recommendations(user_profile,
+                                                       idx_id_dict, 
+                                                       enrolled_course_ids,
+                                                       course_genres_df)
+            score_description = "Note: the score is the alignment (dot product)\
+                                 between the user profile built with the selected\
+                                 courses and the recommended ones."
         elif model_name == MODELS[2] or model_name == MODELS[3] : # 2: "Clustering", 3: "Clustering with PCA"
-            if model_name == MODELS[3]:
-                pass
-            pass
+            # Generate/load data
+            course_genres_df = load_course_genres()
+            idx_id_dict, _ = get_doc_dicts()
+            ratings_df = load_ratings()
+            # Create user profile vector: (1,14)
+            user_ratings = ratings_df[ratings_df['user'] == user_id]
+            enrolled_course_ids = user_ratings['item'].to_list()
+            user_profile = create_user_profile(enrolled_course_ids,
+                                               course_genres_df)
+            user_profile_df = pd.DataFrame(data=user_profile,
+                                           columns=course_genres_df.columns[2:])
+            # Get user cluster
+            cluster = predict_user_clusters(user_profile_df,
+                                            training_artifacts)[0]
+            # Compute recommendations based on user cluster
+            res = compute_user_cluster_recommendations(cluster, 
+                                         ratings_df,
+                                         training_artifacts)
+            score_description = "Note: the score is the number of enrollments\
+                        of each recommended course, which belongs to the user\
+                        cluster of the interacting user."
         elif model_name == MODELS[4]: # 4: "KNN"
             pass
         elif model_name == MODELS[5]: # 5: "NMF"
@@ -366,4 +516,4 @@ def predict(model_name, user_ids, params):
             # Select top_courses
             res_df = res_df.reset_index(drop=True).iloc[:top_courses, :]
 
-    return res_df
+    return res_df, score_description
