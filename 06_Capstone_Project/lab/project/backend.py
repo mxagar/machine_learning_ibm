@@ -17,6 +17,8 @@ from os.path import isfile
 import pandas as pd
 import numpy as np
 
+from scipy.spatial.distance import cosine
+
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -356,17 +358,70 @@ def compute_user_cluster_recommendations(cluster,
     # Take the rows with the required cluster values
     # and sort them according to the number of enrollments
     recommended_courses = (courses_cluster
-                            .loc[courses_cluster.cluster==cluster, ["item", "enrollments"]]
-                            .sort_values(by="enrollments", ascending=False)
-                            )
-    # Extract courses & enronllments (=scores) and pack them in a dictionary
+                               .loc[courses_cluster.cluster==cluster,
+                                    ["item", "enrollments"]]
+                               .sort_values(by="enrollments",
+                                            ascending=False)
+                          )
+    # Extract courses & enrollments (=scores) and pack them in a dictionary
     courses = list(recommended_courses.item)
     scores = list(recommended_courses.enrollments)
     res = {courses[i]:scores[i] for i in range(len(courses))}
 
     return res
- 
+
+def compute_course_user_similarities(rating_sparse_df):
     
+    # Extract item list
+    item_list = rating_sparse_df.columns[1:]
+    item_list_df = pd.DataFrame(data=item_list, columns = ['item'])
+    # Empts similarity matrix
+    item_sim = np.zeros((len(item_list), len(item_list)))
+    # Compare items pairwise
+    for i, this_item in enumerate(item_list):
+        this_item_ratings = rating_sparse_df[this_item].values
+        for j, other_item in enumerate(item_list):
+            other_item_ratings = rating_sparse_df[other_item].values
+            similarity = 1 - cosine(this_item_ratings, other_item_ratings)
+            # FIXME: matrix is symmetric, only half needs to be computed!
+            item_sim[i,j] = similarity
+    # Assemble similarity dataframe
+    item_sim_df = pd.DataFrame(data=item_sim, columns=item_list)
+    item_sim_df = pd.concat([item_list_df, item_sim_df], axis=1)
+    # index, item, AI011EN, BC...
+    # course_list = item_sim_df.columns[1:]
+    # course_list = item_sim_df.item.values
+    
+    return item_sim_df
+
+def compute_knn_courses(enrolled_course_ids,
+                        idx_id_dict,
+                        training_artifacts):
+    # Initialize return dict as empty
+    res = {}
+    # Get course similarity matrix
+    course_sim_df = training_artifacts["course_sim_df"]
+    # Sets of attended/unattended courses
+    all_courses = set(idx_id_dict.values())
+    unselected_course_ids = all_courses.difference(enrolled_course_ids)
+    # Get course score
+    # FIXME: this could be one matrix multiplication
+    for selected_course in enrolled_course_ids:
+        # Get all similarities
+        course_sim_row = course_sim_df.loc[course_sim_df.item==selected_course]
+        for unselected_course in unselected_course_ids:
+            score = 0
+            if unselected_course in course_sim_row.columns:
+                score = course_sim_row[unselected_course].values[0]
+            if unselected_course not in res:
+                res[unselected_course] = score
+            else:
+                if score >= res[unselected_course]:
+                    res[unselected_course] = score    
+        res = {k: v for k, v in sorted(res.items(), key=lambda item: item[1], reverse=True)}
+
+    return res    
+
 def train(model_name, params):
     """Train the selected model."""
     training_artifacts = dict()
@@ -388,7 +443,19 @@ def train(model_name, params):
         # Extend training_artifacts with the new created elements from res_dict
         training_artifacts.update(res_dict)
     elif model_name == MODELS[4]: # 4: "KNN"
-        pass
+        # Compute sparse ratings matrix
+        ratings_df = load_ratings()
+        rating_sparse_df = (ratings_df.pivot(index='user',
+                                            columns='item',
+                                            values='rating')
+                                      .fillna(0)
+                                      .reset_index()
+                                      .rename_axis(index=None,
+                                                   columns=None))
+        # Compute course similarity matrix based on users
+        course_sim_df = compute_course_user_similarities(rating_sparse_df)
+        # Pack results to training_artifact
+        training_artifacts["course_sim_df"] = course_sim_df
     elif model_name == MODELS[5]: # 5: "NMF"
         pass
     elif model_name == MODELS[6]: # 6: "Neural Network"
@@ -400,7 +467,6 @@ def train(model_name, params):
     
     return training_artifacts
 
-# Prediction
 def predict(model_name, user_ids, params, training_artifacts):
     """Predict with the trained model."""
     users = []
@@ -480,18 +546,39 @@ def predict(model_name, user_ids, params, training_artifacts):
                                          ratings_df,
                                          training_artifacts)
             score_description = "Note: the score is the number of enrollments\
-                        of each recommended course, which belongs to the user\
-                        cluster of the interacting user."
+                of each recommended course, which belongs to the user\
+                cluster of the interacting user."
         elif model_name == MODELS[4]: # 4: "KNN"
-            pass
+            # Generate/load data
+            #course_genres_df = load_course_genres()
+            idx_id_dict, _ = get_doc_dicts()
+            ratings_df = load_ratings()
+            # Get selected courses by user
+            user_ratings = ratings_df[ratings_df['user'] == user_id]
+            enrolled_course_ids = user_ratings['item'].to_list()
+            # Compute k nearest neighbors to those users with the similarity matrix
+            res = compute_knn_courses(enrolled_course_ids,
+                                      idx_id_dict,
+                                      training_artifacts)
+            score_description = "Note: the score is the cosine similarity\
+                of the suggested course with respect to one\
+                of the selected courses."
         elif model_name == MODELS[5]: # 5: "NMF"
-            pass
+            score_description = "Note: the score is the ...\
+                ...\
+                ..."
         elif model_name == MODELS[6]: # 6: "Neural Network"
-            pass
+            score_description = "Note: the score is the ...\
+                ...\
+                ..."
         elif model_name == MODELS[7]: # 7: "Regression with Embedding Features"
-            pass
+            score_description = "Note: the score is the ...\
+                ...\
+                ..."
         elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
-            pass
+            score_description = "Note: the score is the ...\
+                ...\
+                ..."
 
     # Filter results depending on score
     for key, score in res.items():
