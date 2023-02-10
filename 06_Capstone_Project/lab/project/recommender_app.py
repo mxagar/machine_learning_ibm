@@ -251,7 +251,10 @@ elif model_selection == backend.MODELS[3]: # 3: "Clustering with PCA"
 elif model_selection == backend.MODELS[4]: # 4: "KNN"
     pass
 elif model_selection == backend.MODELS[5]: # 5: "NMF"
-    pass
+    num_components = st.sidebar.slider('Number of latent components (discovered topics)',
+                                   min_value=0, max_value=30,
+                                   value=15, step=1)
+    params['num_components'] = num_components
 elif model_selection == backend.MODELS[6]: # 6: "Neural Network"
     pass
 elif model_selection == backend.MODELS[7]: # 7: "Regression with Embedding Features"

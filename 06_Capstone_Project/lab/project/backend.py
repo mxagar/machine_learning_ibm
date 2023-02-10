@@ -20,6 +20,7 @@ import numpy as np
 from scipy.spatial.distance import cosine
 
 from sklearn.cluster import KMeans
+from sklearn.decomposition import NMF
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
@@ -445,19 +446,40 @@ def train(model_name, params):
     elif model_name == MODELS[4]: # 4: "KNN"
         # Compute sparse ratings matrix
         ratings_df = load_ratings()
-        rating_sparse_df = (ratings_df.pivot(index='user',
-                                            columns='item',
-                                            values='rating')
-                                      .fillna(0)
-                                      .reset_index()
-                                      .rename_axis(index=None,
-                                                   columns=None))
+        ratings_sparse_df = (ratings_df.pivot(index='user',
+                                             columns='item',
+                                             values='rating')
+                                       .fillna(0)
+                                       .reset_index()
+                                       .rename_axis(index=None,
+                                                    columns=None))
         # Compute course similarity matrix based on users
-        course_sim_df = compute_course_user_similarities(rating_sparse_df)
+        course_sim_df = compute_course_user_similarities(ratings_sparse_df)
         # Pack results to training_artifact
         training_artifacts["course_sim_df"] = course_sim_df
     elif model_name == MODELS[5]: # 5: "NMF"
-        pass
+        # Compute sparse ratings matrix
+        ratings_df = load_ratings()
+        ratings_sparse_df = (ratings_df.pivot(index='user',
+                                             columns='item',
+                                             values='rating')
+                                       .fillna(0)
+                                       .reset_index()
+                                       .rename_axis(index=None,
+                                                    columns=None))
+        # Fit NMF model
+        num_components = params["num_components"]
+        nmf = NMF(n_components=num_components,
+                  init='random',
+                  random_state=RANDOM_SEED)
+        nmf = nmf.fit(ratings_sparse_df.iloc[:,1:]) # (n_samples, n_components)
+        H = nmf.components_ # (n_components, n_features)
+        # W = nmf.transform(X)
+        # X_hat = W@H
+        # H (components) are constant, W (transformed X) changes every time
+        # Pack results to training_artifact
+        training_artifacts["components"] = H
+        training_artifacts["nmf"] = nmf
     elif model_name == MODELS[6]: # 6: "Neural Network"
         pass
     elif model_name == MODELS[7]: # 7: "Regression with Embedding Features"
@@ -564,9 +586,34 @@ def predict(model_name, user_ids, params, training_artifacts):
                 of the suggested course with respect to one\
                 of the selected courses."
         elif model_name == MODELS[5]: # 5: "NMF"
-            score_description = "Note: the score is the ...\
-                ...\
-                ..."
+            # Generate/load data
+            #course_genres_df = load_course_genres()
+            #idx_id_dict, _ = get_doc_dicts()
+            ratings_df = load_ratings()
+            # Create sparse version
+            #FIXME: We should not make sparse the complete frame, but only the user rows!
+            ratings_sparse_df = (ratings_df.pivot(index='user',
+                                        columns='item',
+                                        values='rating')
+                                .fillna(0)
+                                .reset_index()
+                                .rename_axis(index=None,
+                                            columns=None))
+            # Get user rows
+            user_ratings_sparse = ratings_sparse_df[ratings_sparse_df['user'] == user_id]
+            #print(user_ratings_sparse)
+            # Transform user ratings to latent feature space
+            # H (components) are constant, W (transformed X) changes every time
+            H = training_artifacts["components"]
+            nmf = training_artifacts["nmf"]            
+            W = nmf.transform(user_ratings_sparse.iloc[:, 1:])            
+            X_hat = W@H
+            items = list(user_ratings_sparse.columns[1:])
+            ratings = list(X_hat.ravel())
+            res = {items[i]:ratings[i] for i in range(len(items))}                
+            # Pack results to training_artifact
+            score_description = "Note: the score is the rating predicted\
+                by the Non-Negative Matrix Factorization (NMF) model."
         elif model_name == MODELS[6]: # 6: "Neural Network"
             score_description = "Note: the score is the ...\
                 ...\
