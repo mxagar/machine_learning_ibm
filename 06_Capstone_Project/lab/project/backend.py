@@ -25,15 +25,22 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
-MODELS = ("Course Similarity",
-          "User Profile",
-          "Clustering",
-          "Clustering with PCA",
-          "KNN",
-          "NMF",
-          "Neural Network",
-          "Regression with Embedding Features",
-          "Classification with Embedding Features")
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.metrics import RootMeanSquaredError
+from tensorflow.keras.losses import MeanSquaredError
+
+MODELS = ("1. Course Similarity",
+          "2. User Profile",
+          "3. Clustering",
+          "4. Clustering with PCA",
+          "5. KNN",
+          "6. NMF",
+          "7. Neural Network",
+          "8. Regression with Embedding Features",
+          "9. Classification with Embedding Features")
 DATA_ROOT = "data"
 FILEPATH_RATINGS = DATA_ROOT+"/ratings.csv"
 FILEPATH_COURSE_SIMS = DATA_ROOT+"/sim.csv"
@@ -43,6 +50,17 @@ FILEPATH_COURSE_GENRES = DATA_ROOT+"/course_genre.csv"
 FILEPATH_USER_PROFILES = DATA_ROOT+"/user_profile.csv"
 RANDOM_SEED = 123
 NUM_GENRES = 14
+MODEL_DESCRIPTIONS = (
+    "1. Course Similarity",
+    "2. User Profile",
+    "3. Clustering",
+    "4. Clustering with PCA",
+    "5. KNN",
+    "6. NMF",
+    "7. Neural Network",
+    "8. Regression with Embedding Features",
+    "9. Classification with Embedding Features"
+)
 
 def load_ratings():
     """Load ratings dataframe: user, course, rating (2/3)."""
@@ -86,7 +104,15 @@ def load_user_profiles(get_df=True):
         return pd.read_csv(FILEPATH_USER_PROFILES)
     else:
         return None
-        
+
+def get_model_index(model_name):
+    index = None
+    for i in range(len(MODELS)):
+        if model_name == MODELS[i]:
+            index = i
+            break
+    return index
+
 def add_new_ratings(new_courses):
     """The ratings.csv table is extended with the choices
     of the new interactive user. All selected courses
@@ -136,6 +162,187 @@ def get_doc_dicts():
     del grouped_df
 
     return idx_id_dict, id_idx_dict
+
+class RecommenderNet(keras.Model):
+    
+    def __init__(self, num_users, num_items, embedding_size=16, **kwargs):
+        """
+           Constructor
+           :param int num_users: number of users
+           :param int num_items: number of items
+           :param int embedding_size: the size of embedding vector
+        """
+        super(RecommenderNet, self).__init__(**kwargs)
+        self.num_users = num_users
+        self.num_items = num_items
+        self.embedding_size = embedding_size
+        
+        # Define a user_embedding vector
+        # Input dimension is the num_users
+        # Output dimension is the embedding size
+        self.user_embedding_layer = layers.Embedding(
+            input_dim=num_users,
+            output_dim=embedding_size,
+            name='user_embedding_layer',
+            embeddings_initializer="he_normal",
+            embeddings_regularizer=keras.regularizers.l2(1e-6),
+        )
+        # Define a user bias layer
+        self.user_bias = layers.Embedding(
+            input_dim=num_users,
+            output_dim=1,
+            name="user_bias")
+        
+        # Define an item_embedding vector
+        # Input dimension is the num_items
+        # Output dimension is the embedding size
+        self.item_embedding_layer = layers.Embedding(
+            input_dim=num_items,
+            output_dim=embedding_size,
+            name='item_embedding_layer',
+            embeddings_initializer="he_normal",
+            embeddings_regularizer=keras.regularizers.l2(1e-6),
+        )
+        # Define an item bias layer
+        self.item_bias = layers.Embedding(
+            input_dim=num_items,
+            output_dim=1,
+            name="item_bias")
+        
+    def call(self, inputs):
+        """
+           method to be called during model fitting
+           
+           :param inputs: user and item one-hot vectors
+        """
+        # Compute the user embedding vector
+        user_vector = self.user_embedding_layer(inputs[:, 0])
+        user_bias = self.user_bias(inputs[:, 0])
+        item_vector = self.item_embedding_layer(inputs[:, 1])
+        item_bias = self.item_bias(inputs[:, 1])
+        dot_user_item = tf.tensordot(user_vector, item_vector, 2)
+        # Add all the components (including bias)
+        x = dot_user_item + user_bias + item_bias
+        # Sigmoid output layer to output the probability
+        return tf.nn.relu(x)
+
+def encode_ratings(raw_data):
+    
+    encoded_data = raw_data.copy()
+    
+    # Mapping user ids to indices
+    user_list = encoded_data["user"].unique().tolist()
+    user_id2idx_dict = {x: i for i, x in enumerate(user_list)}
+    user_idx2id_dict = {i: x for i, x in enumerate(user_list)}
+    
+    # Mapping course ids to indices
+    course_list = encoded_data["item"].unique().tolist()
+    course_id2idx_dict = {x: i for i, x in enumerate(course_list)}
+    course_idx2id_dict = {i: x for i, x in enumerate(course_list)}
+
+    # Convert original user ids to idx
+    encoded_data["user"] = encoded_data["user"].map(user_id2idx_dict)
+    # Convert original course ids to idx
+    encoded_data["item"] = encoded_data["item"].map(course_id2idx_dict)
+    # Convert rating to int
+    encoded_data["rating"] = encoded_data["rating"].values.astype("int")
+
+    return encoded_data, user_idx2id_dict, course_idx2id_dict
+
+def generate_train_test_datasets_ann(dataset, scale=True):
+
+    min_rating = min(dataset["rating"])
+    max_rating = max(dataset["rating"])
+
+    dataset = dataset.sample(frac=1, random_state=42)
+    x = dataset[["user", "item"]].values
+    if scale:
+        y = dataset["rating"].apply(lambda x: (x - min_rating) / (max_rating - min_rating)).values
+    else:
+        y = dataset["rating"].values
+
+    # Assuming training on 80% of the data and validating on 10%, and testing 10%
+    train_indices = int(0.8 * dataset.shape[0])
+    test_indices = int(0.9 * dataset.shape[0])
+
+    x_train, x_val, x_test, y_train, y_val, y_test = (
+        x[:train_indices],
+        x[train_indices:test_indices],
+        x[test_indices:],
+        y[:train_indices],
+        y[train_indices:test_indices],
+        y[test_indices:],
+    )
+    return x_train, x_val, x_test, y_train, y_val, y_test
+
+def train_ann(ratings_df, embedding_size, epochs):
+    """_summary_
+
+    Args:
+        ratings_df (_type_): _description_
+        embedding_size (_type_): _description_
+        epochs (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    res_dict = dict()
+    
+    # Encode ratings table to integers
+    encoded_data, user_idx2id_dict, course_idx2id_dict = encode_ratings(ratings_df)
+    # Scale dataset and split it to train/val/test
+    X = generate_train_test_datasets_ann(encoded_data)
+    x_train, x_val, x_test, y_train, y_val, y_test = X
+    # Get size for ANN
+    num_users = len(ratings_df['user'].unique())
+    num_items = len(ratings_df['item'].unique())
+    # Instantiate ANN
+    model = RecommenderNet(num_users, num_items, embedding_size)
+    model.compile(optimizer=Adam(learning_rate = .003),
+                    loss=MeanSquaredError(), 
+                    metrics=[RootMeanSquaredError()])
+    
+    # Train ANN
+    run_hist = model.fit(x_train,
+                         y_train,
+                         validation_data=(x_val, y_val),
+                         epochs=epochs,
+                         shuffle=True)
+    
+    # Evaluate trained ANN
+    rmse = model.evaluate(x_test,y_test,verbose=0)
+
+    # Extract embeddings
+    # Create a dataframe of the user features
+    user_latent_features = model.get_layer('user_embedding_layer').get_weights()[0]
+    user_columns = [f"UFeature{i}" for i in range(user_latent_features.shape[1])]
+    user_embeddings_df = pd.DataFrame(data=user_latent_features, columns = user_columns)
+    user_embeddings_df['user'] = user_embeddings_df.index
+    # Shift column 'user' to first position
+    first_column = user_embeddings_df.pop('user')
+    user_embeddings_df.insert(0, 'user', first_column)
+    # Decode user ids
+    user_embeddings_df['user'] = user_embeddings_df['user'].replace(user_idx2id_dict)
+    # Create a dataframe of the item features
+    item_latent_features = model.get_layer('item_embedding_layer').get_weights()[0]
+    item_columns = [f"CFeature{i}" for i in range(item_latent_features.shape[1])]
+    item_embeddings_df = pd.DataFrame(data=item_latent_features, columns = item_columns)
+    item_embeddings_df['item'] = item_embeddings_df.index
+    # Shift column 'item' to first position
+    first_column = item_embeddings_df.pop('item')
+    item_embeddings_df.insert(0, 'item', first_column)
+    # Decode user ids
+    item_embeddings_df['item'] = item_embeddings_df['item'].replace(course_idx2id_dict)
+
+    # Pack all results
+    #res_dict["model"] = model
+    res_dict["rmse"] = rmse
+    res_dict["user_idx2id_dict"] = user_idx2id_dict
+    res_dict["course_idx2id_dict"] = course_idx2id_dict
+    res_dict["user_embeddings_df"] = user_embeddings_df
+    res_dict["item_embeddings_df"] = item_embeddings_df
+
+    return res_dict, model
 
 def course_similarity_recommendations(idx_id_dict, 
                                       id_idx_dict,
@@ -480,12 +687,24 @@ def train(model_name, params):
         # Pack results to training_artifact
         training_artifacts["components"] = H
         training_artifacts["nmf"] = nmf
-    elif model_name == MODELS[6]: # 6: "Neural Network"
-        pass
-    elif model_name == MODELS[7]: # 7: "Regression with Embedding Features"
-        pass
-    elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
-        pass
+    elif model_name == MODELS[6]\
+        or model_name == MODELS[7]\
+        or model_name == MODELS[8]: # 6: "Neural Network"
+        # Load ratings dataset
+        ratings_df = load_ratings()
+        # Extract user parameters
+        num_components = params['num_components']
+        num_epochs = params['num_epochs']
+        # Train ANN
+        res_dict, model = train_ann(ratings_df, num_components, num_epochs)
+        # Extend training_artifacts with the new created elements from res_dict
+        training_artifacts.update(res_dict)
+        
+        # Check sub-options
+        if model_name == MODELS[7]: # 7: "Regression with Embedding Features"
+            pass
+        elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
+            pass
     
     return training_artifacts
 
