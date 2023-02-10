@@ -19,6 +19,8 @@ from st_aggrid import AgGrid
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid import GridUpdateMode, DataReturnMode
 
+ALLOW_ANN = False
+
 # Basic webpage setup
 st.set_page_config(
    page_title="Course Recommender System",
@@ -149,10 +151,23 @@ def train(model_name, params):
     training_artifacts = None
     try:
         assert model_name in backend.MODELS
-        with st.spinner('Training...'):
-            time.sleep(0.5)
-            training_artifacts = backend.train(model_name, params)
-        st.success('Done!')
+        model_index = backend.get_model_index(model_selection)
+        do_train = False
+        if model_index > 5: # Neural Networks & Co.
+            if ALLOW_ANN:
+                do_train = True            
+        else:
+            do_train = True
+        if do_train:  
+            with st.spinner('Training...'):
+                time.sleep(0.5)
+                training_artifacts = backend.train(model_name, params)
+            st.success('Done!')
+        else:
+            st.write("Sorry, the Neural Networks model is not active at the moment\
+                due to the slug memory quota on Heroku. \
+                If you clone the repository, \
+                you can try it on your local machine, though.")
         return training_artifacts
     except AssertionError as err:
         print("Model name must be in the drop down.") # we should use the logger
@@ -177,11 +192,31 @@ def predict(model_name, user_ids, params, training_artifacts):
     # Start making predictions based on model name, test user ids, and parameters
     try:
         assert model_name in backend.MODELS
-        with st.spinner('Generating course recommendations: '):
-            time.sleep(0.5)
-            res, descr = backend.predict(model_name, user_ids, params, training_artifacts)
-        st.success('Recommendations generated!')
-        st.write(descr)
+        model_index = backend.get_model_index(model_selection)
+        do_predict = False
+        if model_index > 5: # Neural Networks & Co.
+            if ALLOW_ANN:
+                do_predict = True            
+        else:
+            do_predict = True
+        if do_predict:
+            with st.spinner('Generating course recommendations: '):
+                time.sleep(0.5)
+                # FIXME: new_id is also contained in params to trigger the cache miss for train()
+                # That makes user_ids redundant, however, necessary if we want to
+                # - maintain a lower API for predict()
+                # - be agnostic of some contents in params within the lower API predict
+                # Fix that! 
+                new_id = params["new_id"]
+                user_ids = [new_id]
+                res, descr = backend.predict(model_name, user_ids, params, training_artifacts)
+            st.success('Recommendations generated!')
+            st.write(descr)
+        else:
+            st.write("Sorry, the Neural Networks model is not active at the moment\
+                due to the slug memory quota on Heroku. \
+                If you clone the repository, \
+                you can try it on your local machine, though.")
         return res
     except AssertionError as err:
         print("Model name must be in the drop down.") # we should use the logger
@@ -219,7 +254,7 @@ model_selection = st.sidebar.selectbox(
 params = {}
 st.sidebar.subheader('2. Tune Hyper-parameters: ')
 top_courses = st.sidebar.slider('Top courses',
-                                min_value=0, max_value=100,
+                                min_value=1, max_value=100,
                                 value=10, step=1)
 params['top_courses'] = top_courses
 # Model-dependent options
@@ -235,13 +270,13 @@ elif model_selection == backend.MODELS[1]: # 1: "User Profile"
     params['profile_threshold'] = profile_threshold
 elif model_selection == backend.MODELS[2]: # 2: "Clustering"
     num_clusters = st.sidebar.slider('Number of clusters',
-                                   min_value=0, max_value=30,
+                                   min_value=1, max_value=30,
                                    value=11, step=1)
     params['num_clusters'] = num_clusters
     params['pca_variance'] = 1.0
 elif model_selection == backend.MODELS[3]: # 3: "Clustering with PCA"
     num_clusters = st.sidebar.slider('Number of clusters',
-                                   min_value=0, max_value=30,
+                                   min_value=1, max_value=30,
                                    value=11, step=1)
     pca_variance = st.sidebar.slider('Genre variance coverage (PCA)',
                                    min_value=0, max_value=100,
@@ -252,23 +287,44 @@ elif model_selection == backend.MODELS[4]: # 4: "KNN"
     pass
 elif model_selection == backend.MODELS[5]: # 5: "NMF"
     num_components = st.sidebar.slider('Number of latent components (discovered topics)',
-                                   min_value=0, max_value=30,
+                                   min_value=1, max_value=30,
                                    value=15, step=1)
     params['num_components'] = num_components
-elif model_selection == backend.MODELS[6]: # 6: "Neural Network"
-    pass
-elif model_selection == backend.MODELS[7]: # 7: "Regression with Embedding Features"
-    pass
-elif model_selection == backend.MODELS[8]: # 8: "Classification with Embedding Features"
-    pass
+elif model_selection == backend.MODELS[6] \
+    or model_selection == backend.MODELS[7]\
+    or model_selection == backend.MODELS[8]: # 6: "Neural Network"
+    num_components = st.sidebar.slider('Number of latent components (embedding size)',
+                                   min_value=1, max_value=30,
+                                   value=16, step=1)
+    num_epochs = st.sidebar.slider('Number of epochs',
+                                   min_value=1, max_value=10,
+                                   value=1, step=1)
+    params['num_components'] = num_components
+    params['num_epochs'] = num_epochs
+    
+    # Check sub-options
+    if model_selection == backend.MODELS[7]: # 7: "Regression with Embedding Features"
+        pass
+    elif model_selection == backend.MODELS[8]: # 8: "Classification with Embedding Features"
+        pass
 
 # Training: Element 3 from sidebar
 st.sidebar.subheader('3. Training: ')
+training_button = False
 training_button = st.sidebar.button("Train Model")
 training_text = st.sidebar.text('')
+# Initialize global training return variables
+training_artifacts = None
+model_index = backend.get_model_index(model_selection)
+new_id = None
 # Start training process
-training_artifacts = {}
 if training_button:
+    if model_index > 5:
+        # For all models on ANN embeddings, we need to have the new user id (the interacting user)
+        # in the training dataset to create embeddings for them.
+        new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
+        params["new_id"] = new_id
+    # Train
     training_artifacts = train(model_selection, params)
 
 # Prediction
@@ -277,17 +333,20 @@ if training_button:
 st.sidebar.subheader('4. Prediction')
 # Start prediction process
 pred_button = st.sidebar.button("Recommend New Courses")
-if not "model_name" in training_artifacts:
+if not training_artifacts:
     # Since train() is cached, we don't really recompute everything
     training_artifacts = train(model_selection, params)
 if pred_button and selected_courses_df.shape[0] > 0:
     # Create a new id for current user session
     # We create a new entry in the ratings.csv for the interactive user
     # who has selected the courses in the UI
-    new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
+    if model_index < 6:
+        # All models which are not based on ANN embeddings don't have
+        # the new user entries in the ratings dataset yet - we need to add them now.
+        new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
+        params["new_id"] = new_id
     if new_id:
-        user_ids = [new_id]
-        res_df = predict(model_selection, user_ids, params, training_artifacts)
+        res_df = predict(model_selection, params, training_artifacts)
         res_df = res_df[['COURSE_ID', 'SCORE']]
         course_df = load_courses()
         res_df = pd.merge(res_df, course_df, on=["COURSE_ID"]).drop('COURSE_ID', axis=1)
