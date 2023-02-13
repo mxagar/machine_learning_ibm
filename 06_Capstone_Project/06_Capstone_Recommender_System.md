@@ -49,6 +49,7 @@ No guarantees
       - [`lab_jupyter_cf_classification_w_embeddings.ipynb`](#lab_jupyter_cf_classification_w_embeddingsipynb)
       - [Forum Questions](#forum-questions)
         - [How can we obtain the embeddings of a new user/item?](#how-can-we-obtain-the-embeddings-of-a-new-useritem)
+        - [The ANN is trained only with existing ratings, which default to 2 and 3](#the-ann-is-trained-only-with-existing-ratings-which-default-to-2-and-3)
   - [5. Deployment and Presentation](#5-deployment-and-presentation)
     - [5.1 Notes on the First App](#51-notes-on-the-first-app)
     - [5.2 Notes on the Project Template](#52-notes-on-the-project-template)
@@ -390,6 +391,14 @@ In the collaborative filtering notebooks with artificial NNs of the 4th week use
 My question is related to the situation in which we have a new user or a new course/item: how should we obtain the embedding representation of them? Those embedding vectors are necessary to use the regression/classification models. However, the new items are not part of the training set, and therefore, the embedding layers don't contain them.
 
 So which is the recommended approach?
+
+##### The ANN is trained only with existing ratings, which default to 2 and 3
+
+In the collaborative filtering notebooks with artificial NNs of the 4th week, user and item embeddings are computed. Then, those embeddings are used as features to create regression and classification models.
+
+That approach re-frames the problem as a supervised learning case. In that setting, we have the following issue: the training labels can refer only to ratings which have the values 2 and 3, thus, the model will predict only those values/classes; however, we would like to predict cases in which the user has no interest at all in the course, i.e., ratings other than 2 and 3, e.g., 0. Therefore, I'm afraid such a supervised learning model doesn't make much sense in the present case.
+
+Is my reasoning correct? If not, where am I wrong?
 
 ## 5. Deployment and Presentation
 
