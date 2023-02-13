@@ -24,6 +24,12 @@ from sklearn.decomposition import NMF
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.preprocessing import LabelEncoder
 
 import tensorflow as tf
 from tensorflow import keras
@@ -166,8 +172,7 @@ def get_doc_dicts():
 class RecommenderNet(keras.Model):
     
     def __init__(self, num_users, num_items, embedding_size=16, **kwargs):
-        """
-           Constructor
+        """Constructor.
            :param int num_users: number of users
            :param int num_items: number of items
            :param int embedding_size: the size of embedding vector
@@ -210,8 +215,7 @@ class RecommenderNet(keras.Model):
             name="item_bias")
         
     def call(self, inputs):
-        """
-           method to be called during model fitting
+        """Method to be called during model fitting.
            
            :param inputs: user and item one-hot vectors
         """
@@ -227,6 +231,19 @@ class RecommenderNet(keras.Model):
         return tf.nn.relu(x)
 
 def encode_ratings(raw_data):
+    """Encode user-item ratings for the ANN training.
+
+    Inputs:
+        raw_data: pd.DataFrame
+            Table with user-course/item ratings
+    Outputs:
+        encoded_data: pd.DataFrame
+            Encoded table in which user & item ids are mapped to integers.
+        user_idx2id_dict: dict
+            User mappings.
+        course_idx2id_dict: dict
+            Course/item mappings
+    """
     
     encoded_data = raw_data.copy()
     
@@ -303,11 +320,14 @@ def train_ann(ratings_df, embedding_size, epochs):
                     metrics=[RootMeanSquaredError()])
     
     # Train ANN
-    run_hist = model.fit(x_train,
-                         y_train,
-                         validation_data=(x_val, y_val),
-                         epochs=epochs,
-                         shuffle=True)
+    #train_me = False
+    train_me = True
+    if train_me:
+        run_hist = model.fit(x_train,
+                            y_train,
+                            validation_data=(x_val, y_val),
+                            epochs=epochs,
+                            shuffle=True)
     
     # Evaluate trained ANN
     rmse = model.evaluate(x_test,y_test,verbose=0)
@@ -343,6 +363,46 @@ def train_ann(ratings_df, embedding_size, epochs):
     res_dict["item_embeddings_df"] = item_embeddings_df
 
     return res_dict, model
+
+def predict_ann_values(model,
+                       unselected_course_ids,
+                       new_id,
+                       training_artifacts):
+    """_summary_
+
+    Args:
+        model (_type_): _description_
+        unselected_course_ids (_type_): _description_
+        training_artifacts (_type_): _description_
+    """
+    result = {}
+    # Get and modify mapping dictionaries
+    course_idx2id_dict = training_artifacts["course_idx2id_dict"]
+    user_idx2id_dict = training_artifacts["user_idx2id_dict"]
+    course_id2idx_dict = {v:k for k,v in course_idx2id_dict.items()}    
+    user_id2idx_dict = {v:k for k,v in user_idx2id_dict.items()}    
+    # Create dataframe with user data
+    courses = list(unselected_course_ids)
+    users = [new_id]*len(courses)
+    data_dict = {"user": users, "item": courses}
+    data_df = pd.DataFrame(data_dict, columns=["user", "item"])
+    # Encode data
+    data_df['item'] = data_df['item'].map(course_id2idx_dict)
+    data_df['user'] = data_df['user'].map(user_id2idx_dict)
+    data_df = data_df.dropna()
+    # Extract data matrix
+    x = data_df[["user", "item"]].values
+    # Predict
+    pred = model.predict(x)
+    # Pack and decode
+    data_df["ratings"] = pred.ravel()
+    data_df['item'] = data_df['item'].map(course_idx2id_dict)
+    data_df['user'] = data_df['user'].map(user_idx2id_dict)
+    courses = data_df['item'].to_list()
+    ratings = data_df["ratings"].to_list()
+    result = {courses[i]: ratings[i] for i in range(len(courses))}
+    
+    return result
 
 def course_similarity_recommendations(idx_id_dict, 
                                       id_idx_dict,
@@ -628,7 +688,62 @@ def compute_knn_courses(enrolled_course_ids,
                     res[unselected_course] = score    
         res = {k: v for k, v in sorted(res.items(), key=lambda item: item[1], reverse=True)}
 
-    return res    
+    return res
+
+def preprocess_embeddings(ratings_df,
+                          user_embeddings_df,
+                          item_embeddings_df):
+    
+    # Merge user embedding features
+    user_emb_merged = pd.merge(ratings_df, 
+                                user_embeddings_df, 
+                                how='left', 
+                                left_on='user', 
+                                right_on='user').fillna(0)
+    # Merge course embedding features
+    merged_df = pd.merge(user_emb_merged, 
+                            item_embeddings_df, 
+                            how='left', 
+                            left_on='item', 
+                            right_on='item').fillna(0)
+
+    # Sum embedding features and create new dataset
+    u_feautres = [f"UFeature{i}" for i in range(16)]
+    c_features = [f"CFeature{i}" for i in range(16)]
+
+    user_embeddings = merged_df[u_feautres]
+    course_embeddings = merged_df[c_features]
+    ratings = merged_df['rating']
+
+    # Aggregate the two feature columns using element-wise add
+    embedding_dataset = user_embeddings + course_embeddings.values
+    embedding_dataset.columns = [f"Feature{i}" for i in range(16)]
+    embedding_dataset['rating'] = ratings
+    
+    # Extract features and target        
+    X = embedding_dataset.iloc[:, :-1]
+    y = embedding_dataset.iloc[:, -1]
+
+    return X, y
+
+def create_embeddings_frame(user_id, user_embeddings_df, item_embeddings_df):
+    # Generate/load data
+    ratings_df = load_ratings()
+    idx_id_dict, _ = get_doc_dicts()
+    user_ratings = ratings_df[ratings_df['user'] == user_id]
+    enrolled_course_ids = user_ratings['item'].to_list() 
+    all_courses = set(idx_id_dict.values())
+    unselected_course_ids = list(all_courses.difference(enrolled_course_ids))            
+    # Create dataframe with courses for which we predict ratings
+    ratings_pred_df = pd.DataFrame(unselected_course_ids, columns=['item'])
+    ratings_pred_df['user'] = [user_id]*len(unselected_course_ids)
+    ratings_pred_df['rating'] = -1
+    # Preprocess ratings dataframe
+    X, _ = preprocess_embeddings(ratings_pred_df,
+                        user_embeddings_df,
+                        item_embeddings_df)
+
+    return X, unselected_course_ids
 
 def train(model_name, params):
     """Train the selected model."""
@@ -699,12 +814,61 @@ def train(model_name, params):
         res_dict, model = train_ann(ratings_df, num_components, num_epochs)
         # Extend training_artifacts with the new created elements from res_dict
         training_artifacts.update(res_dict)
-        
-        # Check sub-options
+        # FIXME:
+        # Tensorflow models cannot be passed in a dict,
+        # because they're not hashable.
+        # A quick and dirty solution is to compute the prediction here...
+        #training_artifacts["model"] = model
+        new_id = params["new_id"]
+        idx_id_dict, _ = get_doc_dicts()
+        all_courses = set(idx_id_dict.values())
+        user_ratings = ratings_df[ratings_df['user'] == new_id]
+        enrolled_course_ids = user_ratings['item'].to_list()
+        unselected_course_ids = all_courses.difference(enrolled_course_ids)        
+        result = predict_ann_values(model,
+                                    unselected_course_ids,
+                                    new_id,
+                                    training_artifacts)
+        training_artifacts["result"] = result
+        # Prepare inputs for sub-options: regression & classification with embeddings
+        user_embeddings_df = training_artifacts["user_embeddings_df"]
+        item_embeddings_df = training_artifacts["item_embeddings_df"]        
+        X, y = preprocess_embeddings(ratings_df,
+                                    user_embeddings_df,
+                                    item_embeddings_df)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, # predictive variables
+            y, # target
+            test_size=0.1, # portion of dataset to allocate to test set
+            random_state=RANDOM_SEED # we are setting the seed here, ALWAYS DO IT!
+        )
+        # Run sub-options
         if model_name == MODELS[7]: # 7: "Regression with Embedding Features"
-            pass
+            # Define and train model
+            lr = LinearRegression()
+            lr.fit(X_train, y_train)
+            pred = lr.predict(X_test)
+            rmse = mean_squared_error(y_test, pred, squared=False)
+            # Pack results
+            training_artifacts["lr_model"] = lr
+            training_artifacts["rmse_lr"] = rmse
         elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
-            pass
+            # Encode labels
+            label_encoder = LabelEncoder()
+            y_train_ = label_encoder.fit_transform(y_train.values.ravel())
+            y_test_ = label_encoder.transform(y_test.values.ravel())
+            # Define and train model
+            rf = RandomForestClassifier(random_state=RANDOM_SEED,
+                                        max_depth=20,
+                                        min_samples_split=2,
+                                        n_estimators=100)
+            rf.fit(X_train, y_train_)
+            pred = rf.predict(X_test)
+            _, _, f1, _ = precision_recall_fscore_support(y_test_, pred)
+            # Pack results
+            training_artifacts["rf_model"] = rf
+            training_artifacts["le_rf"] = label_encoder
+            training_artifacts["f1_rf"] = np.mean(f1)
     
     return training_artifacts
 
@@ -834,17 +998,46 @@ def predict(model_name, user_ids, params, training_artifacts):
             score_description = "Note: the score is the rating predicted\
                 by the Non-Negative Matrix Factorization (NMF) model."
         elif model_name == MODELS[6]: # 6: "Neural Network"
-            score_description = "Note: the score is the ...\
-                ...\
-                ..."
+            res = training_artifacts["result"]
+            score_description = "Note: the score is the rating predicted\
+                by the neural network model."
         elif model_name == MODELS[7]: # 7: "Regression with Embedding Features"
-            score_description = "Note: the score is the ...\
-                ...\
-                ..."
+            # Extract model
+            lr = training_artifacts["lr_model"]
+            # Generate/load data
+            user_embeddings_df = training_artifacts["user_embeddings_df"]
+            item_embeddings_df = training_artifacts["item_embeddings_df"]        
+            X, unselected_course_ids = create_embeddings_frame(user_id,
+                                                               user_embeddings_df,
+                                                               item_embeddings_df)
+            # Predict dataframe
+            pred = lr.predict(X)
+            # Pack results
+            ratings = pred.ravel()
+            res = {unselected_course_ids[i]:ratings[i] for i in range(len(unselected_course_ids))}                
+            score_description = "Note: the score is the rating predicted\
+                by the regression model which works\
+                with the embeddings created by a neural network."
         elif model_name == MODELS[8]: # 8: "Classification with Embedding Features"
-            score_description = "Note: the score is the ...\
-                ...\
-                ..."
+            # Extract model
+            rf = training_artifacts["rf_model"]
+            label_encoder = training_artifacts["le_rf"]
+            # Generate/load data
+            user_embeddings_df = training_artifacts["user_embeddings_df"]
+            item_embeddings_df = training_artifacts["item_embeddings_df"]        
+            X, unselected_course_ids = create_embeddings_frame(user_id,
+                                                               user_embeddings_df,
+                                                               item_embeddings_df)
+            # Predict dataframe and process output
+            pred = rf.predict(X)
+            y_pred = label_encoder.inverse_transform(pred)
+            prob = rf.predict_proba(X)
+            ratings = y_pred*np.max(prob,axis=1)
+            # Pack results
+            res = {unselected_course_ids[i]:ratings[i] for i in range(len(unselected_course_ids))}                
+            score_description = "Note: the score is the rating x probability predicted\
+                by the classification model which works\
+                with the embeddings created by a neural network."
 
     # Filter results depending on score
     for key, score in res.items():

@@ -19,7 +19,11 @@ from st_aggrid import AgGrid
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid import GridUpdateMode, DataReturnMode
 
-ALLOW_ANN = False
+# Using ANNs with Tensorflow exceeds the memory
+# limits of the Heroku slug. Thus, you can deactivate
+# models 6-7-8, which use Tensorflow, when the app
+# is deployed. For local runs, you can allow ANNs.
+ALLOW_ANN = True
 
 # Basic webpage setup
 st.set_page_config(
@@ -173,7 +177,7 @@ def train(model_name, params):
         print("Model name must be in the drop down.") # we should use the logger
         raise err
 
-def predict(model_name, user_ids, params, training_artifacts):
+def predict(model_name, params, training_artifacts):
     """Predict function for
     the trained model.
     
@@ -316,15 +320,13 @@ training_text = st.sidebar.text('')
 # Initialize global training return variables
 training_artifacts = None
 model_index = backend.get_model_index(model_selection)
-new_id = None
+#new_id = None
 # Start training process
-if training_button:
-    if model_index > 5:
-        # For all models on ANN embeddings, we need to have the new user id (the interacting user)
-        # in the training dataset to create embeddings for them.
-        new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
-        params["new_id"] = new_id
-    # Train
+if training_button and model_index < 6:
+    #FIXME
+    # For all models on ANN embeddings, we need to have the new user id (the interacting user)
+    # in the training dataset to create embeddings for them.
+    # Therefore, we train here only for the rest of the models
     training_artifacts = train(model_selection, params)
 
 # Prediction
@@ -333,18 +335,22 @@ if training_button:
 st.sidebar.subheader('4. Prediction')
 # Start prediction process
 pred_button = st.sidebar.button("Recommend New Courses")
-if not training_artifacts:
-    # Since train() is cached, we don't really recompute everything
-    training_artifacts = train(model_selection, params)
 if pred_button and selected_courses_df.shape[0] > 0:
+    if model_index < 6 and not training_artifacts:
+        # Since train() is cached, we don't really recompute everything
+        # All models which are not based on ANN embeddings don't have
+        # the new user entries in the ratings dataset yet - we need to add them now.
+        training_artifacts = train(model_selection, params)
     # Create a new id for current user session
     # We create a new entry in the ratings.csv for the interactive user
     # who has selected the courses in the UI
-    if model_index < 6:
-        # All models which are not based on ANN embeddings don't have
-        # the new user entries in the ratings dataset yet - we need to add them now.
-        new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
-        params["new_id"] = new_id
+    new_id = backend.add_new_ratings(selected_courses_df['COURSE_ID'].values)
+    params["new_id"] = new_id
+    if model_index > 5:
+        #FIXME
+        # For all models on ANN embeddings, we need to have the new user id (the interacting user)
+        # in the training dataset to create embeddings for them.
+        training_artifacts = train(model_selection, params)
     if new_id:
         res_df = predict(model_selection, params, training_artifacts)
         res_df = res_df[['COURSE_ID', 'SCORE']]
