@@ -3,11 +3,14 @@ which runs different Recommender Systems
 that suggest new AI courses to a user
 that pre-selects some topics.
 
-In a more production-like environment
+WARNING: In a more production-like environment
 the backend would use a library/package
 where models definition & training is implemented.
 However, here, for the sake of simplicity,
 everything is packed in the backend.
+
+Also, note that there are several issues
+marked with a FIXME tag.
 
 Author: Mikel Sagardia
 Date: 2023-02-07
@@ -57,15 +60,39 @@ FILEPATH_USER_PROFILES = DATA_ROOT+"/user_profile.csv"
 RANDOM_SEED = 123
 NUM_GENRES = 14
 MODEL_DESCRIPTIONS = (
-    "1. Course Similarity",
-    "2. User Profile",
-    "3. Clustering",
-    "4. Clustering with PCA",
-    "5. KNN",
-    "6. NMF",
-    "7. Neural Network",
-    "8. Regression with Embedding Features",
-    "9. Classification with Embedding Features"
+    "Course similarities are built from course text descriptions using Bags-of-Words (BoW). \
+        A similarity value is the projection of a course descriptor vector in the form of a BoW \
+        on another, i.e., the cosine similarity between both. Given the selected courses, \
+        the set of courses with the highest similarity value are found.",
+    "Courses have a genre descriptor vector which encodes all the topics covered by them. \
+        User profiles can be built by summing the user course descriptors scaled by the ratings \
+        associated by the user. Then, given a user profile, the unselected courses that are \
+        most aligned with it can be found using the cosine similarity (i.e., dot product) \
+        between the profile and the course. The courses with the highest scores are provided.",
+    "Courses have a genre descriptor vector which encodes all the topics covered by them. \
+        User profiles can be built by summing the user course descriptors scaled by the ratings \
+        associated by the user. Then, those users can be clustered according to their profile. \
+        This approach provides with the courses most popular within the user cluster.",
+    "This approach is the same as the Clustering approach, with the user profile descriptors \
+        are transformed to their principal components and only a subset of them is taken, \
+        enough to cover a percentage of the total variance, selected by the user.",
+    "Given the ratings dataframe, course columns are treated as course descriptors, i.e., \
+        each course is defined by all the ratings provided by teh users. With that, a \
+        course similarity matrix is built using the cosine similarity. Then, for the set \
+        selected courses, the most similar ones are suggested.",
+    "Non-Negative Matrix Factorization is performed: given the ratings dataset which contains \
+        the rating of each user for each course (sparse notation), the matrix is factorized \
+        as the multiplication of two lower rank matrices. That lower rank is the size of \
+        a latent space which represents discovered inherent features. With the factorization, \
+        the ratings of unselected courses are predicted.",
+    "An Artificial Neural Network (ANN) which maps users and courses to ratings is defined and trained. \
+        If the user is in the training set, the ratings for unselected courses can be predicted. \
+        However, the most interesting part of this approach consists in extracting the embeddings \
+        from the ANN for later use.",
+    "The user and item embeddings extracted from the ANN are used to build a linear regression model \
+        which predicts the rating given the embedding of a user and a course.",
+    "The user and item embeddings extracted from the ANN are used to build a random forest \
+        classification model which predicts the rating given the embedding of a user and a course."
 )
 
 def load_ratings():
@@ -112,6 +139,16 @@ def load_user_profiles(get_df=True):
         return None
 
 def get_model_index(model_name):
+    """Get model index value given its name.
+
+    Inputs:
+        model_name: str
+            Name of the model, contained in the MODELS tuple.
+
+    Outputs:
+        index: int
+            Index of the model name in the MODELS tuple.
+    """
     index = None
     for i in range(len(MODELS)):
         if model_name == MODELS[i]:
@@ -267,7 +304,18 @@ def encode_ratings(raw_data):
     return encoded_data, user_idx2id_dict, course_idx2id_dict
 
 def generate_train_test_datasets_ann(dataset, scale=True):
+    """Scale and split dataset for training ANNs.
 
+    Args:
+        dataset: pd.DataFrame
+            Table with features (user & item) and target (rating).
+        scale: bool
+            Whether to scale target or not. Defaults to True.
+
+    Returns:
+        x_train, x_val, x_test, y_train, y_val, y_test: np.array
+            Scaled and splitted features and target.
+    """
     min_rating = min(dataset["rating"])
     max_rating = max(dataset["rating"])
 
@@ -293,15 +341,21 @@ def generate_train_test_datasets_ann(dataset, scale=True):
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 def train_ann(ratings_df, embedding_size, epochs):
-    """_summary_
+    """Instantiate and train ANN model.
 
-    Args:
-        ratings_df (_type_): _description_
-        embedding_size (_type_): _description_
-        epochs (_type_): _description_
+    Inputs:
+        ratings_df: pd.DataFrame
+            Dataframe with user-time-ratings.
+        embedding_size: int
+            Size of the latent embedding components.
+        epochs: int
+            Number of epochs.
 
-    Returns:
-        _type_: _description_
+    Outputs:
+        res_dict: dict
+            Dictionary with training artifacts.
+        model: class RecommenderNet
+            Keras ANN, trained.
     """
     res_dict = dict()
     
@@ -368,12 +422,21 @@ def predict_ann_values(model,
                        unselected_course_ids,
                        new_id,
                        training_artifacts):
-    """_summary_
+    """Given the trained model and new user & selected courses,
+    predict ratings for the unselected courses.
 
-    Args:
-        model (_type_): _description_
-        unselected_course_ids (_type_): _description_
-        training_artifacts (_type_): _description_
+    Inputs:
+        model: class RecommenderNet
+            Keras ANN, trained.
+        unselected_course_ids: list
+            List of unselected courses.
+        new_id: int
+            Index of the new user.
+        training_artifacts: dict
+            Training artifacts.
+    Outputs:
+        result: dict
+            Rating prediction for each unselected course.
     """
     result = {}
     # Get and modify mapping dictionaries
@@ -550,6 +613,23 @@ def build_user_profiles(course_genres_df,
 def cluster_users(user_profiles_df,
                   pca_variance,
                   num_clusters):
+    
+    """Cluster user according to their profile
+    using K-Means. Apply PCA to the features (topics/genres)
+    if specified.
+
+    Inputs:
+        user_profiles_df: pd.DataFrame
+            Dataframe with generated user profiles.
+        pca_variance: float
+            Explained variance ratio if PCA is applied.
+            PCA is applied only if < 1.0.
+        num_clusters: int
+            Number of clusters to find.
+    Outputs:
+        res_dict: dict
+            Dictionary with training artifacts, incl. model.
+    """
     res_dict = dict()
     # FIXME: I no longer store/return PCA components,
     # so it's better to use Pipeline.fit() even with such a small pipeline...
@@ -590,6 +670,17 @@ def cluster_users(user_profiles_df,
 
 def predict_user_clusters(user_profiles_df,
                           training_artifacts):
+    """Predict the cluster of the user profiles passed.
+
+    Inputs:
+        user_profiles_df: pd.DataFrame
+            User profiles.
+        training_artifact: dict
+            Clustering artifacts, incl. model.
+    Outputs:
+        clusters: np.array
+            Predicted user clusters.
+    """
     # Unpack training artifacts
     feature_names = training_artifacts['feature_names']
     pipe = training_artifacts['pipe']
@@ -602,11 +693,13 @@ def predict_user_clusters(user_profiles_df,
 def compute_user_cluster_recommendations(cluster, 
                                          ratings_df,
                                          training_artifacts):
-    """...
+    """For a given cluster, computed the most common courses.
 
     Inputs:
         cluster: int
+            Cluster id.
         ratings_df: pandas.DataFrame
+            All user-course ratings.
         training_artifacts: dict
             List of selected courses, i.e., user enrolled courses.
     Outputs:
@@ -639,7 +732,18 @@ def compute_user_cluster_recommendations(cluster,
     return res
 
 def compute_course_user_similarities(rating_sparse_df):
-    
+    """Build course descriptor vectors taking the ratings
+    provided by each user. Then, compute the cosine similarity between the
+    course vectors.
+
+    Args:
+        rating_sparse_df: pd.DataFrame
+            Sparse dataframe of user-course ratings.
+
+    Returns:
+        item_sim_df: pd.DataFrame
+            Table wth item similarity values, matrix.
+    """
     # Extract item list
     item_list = rating_sparse_df.columns[1:]
     item_list_df = pd.DataFrame(data=item_list, columns = ['item'])
@@ -665,6 +769,19 @@ def compute_course_user_similarities(rating_sparse_df):
 def compute_knn_courses(enrolled_course_ids,
                         idx_id_dict,
                         training_artifacts):
+    """Given a list of enrolled courses 
+    and a course similarity matrix (contained in the training artifacts),
+    go through the non-selected courses and build a dictionary
+    with the largest similarity score for each non-selected course.
+
+    Inputs:
+        enrolled_course_ids: list
+        idx_id_dict: dict
+        training_artifacts: dict
+
+    Outputs:
+        res: dict
+    """
     # Initialize return dict as empty
     res = {}
     # Get course similarity matrix
@@ -693,7 +810,17 @@ def compute_knn_courses(enrolled_course_ids,
 def preprocess_embeddings(ratings_df,
                           user_embeddings_df,
                           item_embeddings_df):
-    
+    """Join the ANN embeddings to the ratings dataframe
+    and generate the features.
+
+    Inputs:
+        ratings_df: pd.DataFrame
+        user_embeddings_df: pd.DataFrame
+        item_embeddings_df: pd.DataFrame
+
+    Outputs:
+        X, y: np.array
+    """
     # Merge user embedding features
     user_emb_merged = pd.merge(ratings_df, 
                                 user_embeddings_df, 
@@ -727,6 +854,19 @@ def preprocess_embeddings(ratings_df,
     return X, y
 
 def create_embeddings_frame(user_id, user_embeddings_df, item_embeddings_df):
+    """Given a new series of ratings, create a
+    dataframe which contains the corresponding embeddings
+    for each user-item row.
+
+    Inputs:
+        user_id: int
+        user_embeddings_df: pd.DataFrame
+        item_embeddings_df: pd.DataFrame
+
+    Outputs:
+        X: np.array
+        unselected_course_ids: list
+    """
     # Generate/load data
     ratings_df = load_ratings()
     idx_id_dict, _ = get_doc_dicts()
@@ -746,7 +886,20 @@ def create_embeddings_frame(user_id, user_embeddings_df, item_embeddings_df):
     return X, unselected_course_ids
 
 def train(model_name, params):
-    """Train the selected model."""
+    """Train the selected model.
+    
+    Each model has a dedicated case and produces a specific
+    training_artifacts.
+    
+    Inputs:
+        model_name: str
+            Model name as in MODELS.
+        params: dict
+            Parameters collected in the UI.
+    Outputs:
+        training_artifacts: dict
+            Training artifacts, sometimes the model/inference pipeline is included.
+    """
     training_artifacts = dict()
     training_artifacts["model_name"] = model_name
     if model_name == MODELS[0]: # 0: "Course Similarity"
@@ -873,7 +1026,26 @@ def train(model_name, params):
     return training_artifacts
 
 def predict(model_name, user_ids, params, training_artifacts):
-    """Predict with the trained model."""
+    """Predict with the trained model.
+    
+    Each model has its dedicated part.
+    
+    Inputs:
+        model_name: str
+            Model name as in MODELS.
+        user_ids: int
+            New user id.
+        params: dict
+            Parameters collected from the UI.
+        training_artifacts: dict
+            Training objects/artifacts, sometimes the model/inference pipeline is included.
+    Outputs:
+        res_df: dict
+            Results packed in a dictionary which contains pairs
+            course:score
+        score_description: str
+            String which describes the score.
+    """
     users = []
     courses = []
     scores = []
