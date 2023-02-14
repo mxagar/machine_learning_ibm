@@ -66,29 +66,31 @@ MODEL_DESCRIPTIONS = (
         the set of courses with the highest similarity value are found.",
     "Courses have a genre descriptor vector which encodes all the topics covered by them. \
         User profiles can be built by summing the user course descriptors scaled by the ratings \
-        associated by the user. Then, given a user profile, the unselected courses that are \
+        given by the user. Then, for a target user profile, the unselected courses that are \
         most aligned with it can be found using the cosine similarity (i.e., dot product) \
-        between the profile and the course. The courses with the highest scores are provided.",
+        between the profile and the courses. Finally, the courses with the highest scores are provided.",
     "Courses have a genre descriptor vector which encodes all the topics covered by them. \
         User profiles can be built by summing the user course descriptors scaled by the ratings \
-        associated by the user. Then, those users can be clustered according to their profile. \
+        given by the users. Then, those users can be clustered according to their profile. \
         This approach provides with the courses most popular within the user cluster.",
-    "This approach is the same as the Clustering approach, with the user profile descriptors \
+    "This approach is the same as the simple clustering approach, but the user profile descriptors \
         are transformed to their principal components and only a subset of them is taken, \
         enough to cover a percentage of the total variance, selected by the user.",
     "Given the ratings dataframe, course columns are treated as course descriptors, i.e., \
-        each course is defined by all the ratings provided by teh users. With that, a \
-        course similarity matrix is built using the cosine similarity. Then, for the set \
+        each course is defined by all the ratings provided by the users. With that, a \
+        course similarity matrix is built using the cosine similarity. Then, for the set of \
         selected courses, the most similar ones are suggested.",
     "Non-Negative Matrix Factorization is performed: given the ratings dataset which contains \
         the rating of each user for each course (sparse notation), the matrix is factorized \
         as the multiplication of two lower rank matrices. That lower rank is the size of \
-        a latent space which represents discovered inherent features. With the factorization, \
-        the ratings of unselected courses are predicted.",
+        a latent space which represents discovered inherent features). With the factorization, \
+        the ratings of unselected courses are predicted by multiplying the lower rank matrices, \
+        which yields the approximate but complete user-course rating table.",
     "An Artificial Neural Network (ANN) which maps users and courses to ratings is defined and trained. \
         If the user is in the training set, the ratings for unselected courses can be predicted. \
-        However, the most interesting part of this approach consists in extracting the embeddings \
-        from the ANN for later use.",
+        However, the most interesting part of this approach consists in extracting the user and course \
+        embeddings from the ANN for later use. An embedding vector is a continuous N-dimensional \
+        representation of a discrete object (e.g., a user).",
     "The user and item embeddings extracted from the ANN are used to build a linear regression model \
         which predicts the rating given the embedding of a user and a course.",
     "The user and item embeddings extracted from the ANN are used to build a random forest \
