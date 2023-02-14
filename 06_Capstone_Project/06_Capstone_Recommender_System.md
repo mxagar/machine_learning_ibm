@@ -55,7 +55,7 @@ No guarantees
     - [5.2 Notes on the Project Template](#52-notes-on-the-project-template)
       - [Streamlit App Structure](#streamlit-app-structure)
       - [Interesting Links](#interesting-links)
-    - [5.3 Notes on the Presentation](#53-notes-on-the-presentation)
+    - [5.3 Notes on the Report and the Presentation](#53-notes-on-the-report-and-the-presentation)
   - [6. Project Submission](#6-project-submission)
 
 ## 1. Introduction
@@ -301,7 +301,7 @@ Recommendations based on user profile clustering:
 
 Collaborative filtering is based on the assumption/fact that there is a relationship between users and items, so that we can determine which items a user might prefer.
 
-There are two major collaborative filtering approaches:´, depending on which similarites or point neighborhoods we observe:
+There are two major collaborative filtering approaches, depending on which similarities or point neighborhoods we observe:
 
 - User-based
 - Item-based
@@ -532,6 +532,46 @@ Files:
 - [Medium: 7 Reasons Why You Should Use the Streamlit AgGrid Component](https://towardsdatascience.com/7-reasons-why-you-should-use-the-streamlit-aggrid-component-2d9a2b6e32f0)
 
 
-### 5.3 Notes on the Presentation
+### 5.3 Notes on the Report and the Presentation
+
+Elements of the findings report:
+
+- Cover page
+- Executive summary (abstract): should be stand-alone
+- Table of contents
+- Introduction
+- Methodology
+- Results
+- Discussion: engage the audience
+- Conclusion
+- Appendix
+
+Presentations:
+
+- Use data only as supporting evidence
+- Share only one point on each chart
+- Eliminate data which does not support the key message
+- Tell a story with the data
 
 ## 6. Project Submission
+
+Grading criteria:
+
+- Uploaded your completed presentation in PDF format (2 pts)
+- Completed the required Introduction slide (4 pt)
+- Completed the required Exploratory Data Analysis slides (8 pts)
+- Completed the required content-based recommender system using user profile and course genres slides (6 pts)
+- Completed the required content-based recommender system using course similarity slides (6 pts)
+- Completed the required content-based recommender system using user profile clustering slides (6 pts)
+- Completed the required KNN-based collaborative filtering slide (6 pts)
+- Completed the required NMF-based collaborative filtering slide (6 pts)
+- Completed the required neural network embedding based collaborative filtering slide (6 pts)
+- Completed the required collaborative filtering algorithms evaluation slides (6 pts)
+- Completed the required Conclusion slide (6 pts)
+- Applied your creativity to improve the presentation beyond the template (4 pts)
+- Displayed any innovative insights (4 pts)
+
+Presentation: 
+
+- [`ml-capstone-coursera.pptx`](./lab/project/ml-capstone-coursera.pptx)
+- [`ml-capstone-coursera.pdf`](./lab/project/ml-capstone-coursera.pdf)
