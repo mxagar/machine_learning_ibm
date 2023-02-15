@@ -215,6 +215,7 @@ def predict(model_name, params, training_artifacts):
                 user_ids = [new_id]
                 res, descr = backend.predict(model_name, user_ids, params, training_artifacts)
             st.success('Recommendations generated!')
+            st.write(f"**{backend.MODELS[model_index][3:]}**: {backend.MODEL_DESCRIPTIONS[model_index]}")          
             st.write(descr)
         else:
             st.write("Sorry, the Neural Networks model is not active at the moment\
@@ -246,6 +247,9 @@ st.sidebar.title('Personalized Learning Recommender')
 # Initialize the app
 # Here the UI elements 1 & 2 from the main body are created
 selected_courses_df = init_recommender_app()
+
+# Link to Github
+st.sidebar.markdown('For more information, please check the [Github repository](https://github.com/mxagar/course_recommender_streamlit).')
 
 # Model selection selectbox: Element 1 from sidebar
 st.sidebar.subheader('1. Select recommendation models')
