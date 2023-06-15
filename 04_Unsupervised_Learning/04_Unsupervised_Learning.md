@@ -1,4 +1,4 @@
-# Supervised Machine Learning: Regression
+# Unsupervised Machine Learning
 
 These are my notes and the code of the [IBM Machine Learning Professional Certificate](https://www.coursera.org/professional-certificates/ibm-machine-learning) offered by IBM & Coursera.
 
@@ -18,7 +18,7 @@ No guarantees
 
 ## Overview of Contents
 
-- [Supervised Machine Learning: Regression](#supervised-machine-learning-regression)
+- [Unsupervised Machine Learning](#unsupervised-machine-learning)
   - [Overview of Contents](#overview-of-contents)
   - [1. Introduction to Unsupervised Learning](#1-introduction-to-unsupervised-learning)
     - [1.1 Curse of Dimensionality](#11-curse-of-dimensionality)
